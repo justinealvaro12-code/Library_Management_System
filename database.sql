@@ -109,18 +109,18 @@ CREATE TABLE IF NOT EXISTS activity_logs (
 -- ============================================
 
 -- Default Admin
-INSERT INTO users (full_name, email, password, role) VALUES
+INSERT IGNORE INTO users (full_name, email, password, role) VALUES
 ('System Admin', 'admin@rmc.edu.ph', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin');
 
 -- Default Librarian
-INSERT INTO users (full_name, email, password, role) VALUES
+INSERT IGNORE INTO users (full_name, email, password, role) VALUES
 ('Maria Santos', 'librarian@rmc.edu.ph', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'librarian');
 
 -- Default Settings
-INSERT INTO settings (setting_key, setting_value) VALUES
+INSERT IGNORE INTO settings (setting_key, setting_value) VALUES
 ('library_name', 'Regis Marie College Library'),
 ('loan_period_days', '7'),
-('fine_per_day', '5.00'),
+('fine_per_day', '20.00'),
 ('max_books_per_student', '3'),
 ('reservation_expiry_days', '2');
 
