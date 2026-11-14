@@ -151,8 +151,18 @@ $roleColor  = $roleColors[$role] ?? '#555';
   }
   .btn-logout:hover { background: rgba(214,69,69,0.2); color: #ff8080; }
 
+  /* CONTENT COLUMN */
+  .content-wrap {
+    flex: 1;
+    min-width: 0;
+    min-height: 100vh;
+    margin-left: var(--sidebar-w);
+    display: flex;
+    flex-direction: column;
+  }
+
   /* MAIN */
-  .main { margin-left: var(--sidebar-w); flex: 1; padding: 32px; }
+  .main { flex: 1; padding: 32px; }
   .page-header { margin-bottom: 28px; }
   .page-header h1 { font-family: 'Playfair Display', serif; font-size: 26px; color: var(--navy); }
   .page-header p { color: #888; font-size: 14px; margin-top: 4px; }
@@ -275,7 +285,7 @@ $roleColor  = $roleColors[$role] ?? '#555';
   .alert-danger  { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
 
   .site-footer {
-    margin-left: var(--sidebar-w);
+    margin-top: auto;
     padding: 16px 32px;
     font-size: 12px;
     color: #aaa;
@@ -303,8 +313,8 @@ $roleColor  = $roleColors[$role] ?? '#555';
     .sidebar { transform: translateX(-100%); }
     body.menu-open .sidebar { transform: translateX(0); }
     .mobile-menu-toggle { display: flex; align-items: center; justify-content: center; }
-    .main { margin-left: 0; padding: 20px; }
-    .site-footer { margin-left: 0; }
+    .main { padding: 20px; }
+    .content-wrap { margin-left: 0; }
   }
 </style>
 </head>
@@ -339,4 +349,5 @@ $roleColor  = $roleColors[$role] ?? '#555';
   </div>
 </aside>
 
+<div class="content-wrap">
 <main class="main">
