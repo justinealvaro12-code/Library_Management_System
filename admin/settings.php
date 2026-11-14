@@ -7,7 +7,7 @@ $activePage = 'settings';
 $errors     = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $library_name = sanitize($conn, trim($_POST['library_name'] ?? ''));
+    $library_name = trim($_POST['library_name'] ?? '');
     $loan_period  = (int)($_POST['loan_period_days'] ?? 0);
     $fine_per_day = (float)($_POST['fine_per_day'] ?? 0);
     $max_books    = (int)($_POST['max_books_per_student'] ?? 0);
@@ -39,9 +39,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ];
 
         foreach ($values as $key => $value) {
-            $safeValue = sanitize($conn, $value);
-            $conn->query("INSERT INTO settings (setting_key, setting_value) VALUES ('$key', '$safeValue')
-                          ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)");
+            dbExecute(
+                $conn,
+                "INSERT INTO settings (setting_key, setting_value) VALUES (?, ?)
+                 ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)",
+                'ss',
+                [$key, $value]
+            );
         }
 
         logActivity($conn, $_SESSION['user_id'], 'update_settings', 'System settings updated');

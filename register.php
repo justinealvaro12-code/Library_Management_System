@@ -11,16 +11,18 @@ $error = '';
 $success = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $student_id     = sanitize($conn, $_POST['student_id'] ?? '');
-    $full_name      = sanitize($conn, $_POST['full_name'] ?? '');
-    $email          = sanitize($conn, $_POST['email'] ?? '');
-    $contact_number = sanitize($conn, $_POST['contact_number'] ?? '');
-    $address        = sanitize($conn, $_POST['address'] ?? '');
+    $student_id     = trim($_POST['student_id'] ?? '');
+    $full_name      = trim($_POST['full_name'] ?? '');
+    $email          = trim($_POST['email'] ?? '');
+    $contact_number = trim($_POST['contact_number'] ?? '');
+    $address        = trim($_POST['address'] ?? '');
     $password       = $_POST['password'] ?? '';
     $confirm        = $_POST['confirm_password'] ?? '';
 
     if (empty($student_id) || empty($full_name) || empty($email) || empty($password)) {
         $error = 'Please fill in all required fields.';
+    } elseif (!preg_match('/^[A-Za-z0-9-]{4,20}$/', $student_id)) {
+        $error = 'Student ID must be 4-20 characters using letters, digits, or dashes only.';
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error = 'Please enter a valid email address.';
     } elseif (strlen($password) < 6) {
@@ -30,8 +32,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         $hashed = password_hash($password, PASSWORD_DEFAULT);
         try {
-            $conn->query("INSERT INTO users (student_id, full_name, email, password, role, contact_number, address)
-                          VALUES ('$student_id', '$full_name', '$email', '$hashed', 'student', '$contact_number', '$address')");
+            dbExecute(
+                $conn,
+                "INSERT INTO users (student_id, full_name, email, password, role, contact_number, address)
+                 VALUES (?, ?, ?, ?, 'student', ?, ?)",
+                'ssssss',
+                [$student_id, $full_name, $email, $hashed, $contact_number, $address]
+            );
             $success = 'Registration successful! You can now sign in.';
         } catch (mysqli_sql_exception $e) {
             if ((int)$e->getCode() === 1062) {

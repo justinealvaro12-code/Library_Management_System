@@ -5,7 +5,10 @@ requireRole('admin');
 $pageTitle  = 'Transactions';
 $activePage = 'transactions';
 
-$filter = sanitize($conn, $_GET['filter'] ?? '');
+$filter = trim($_GET['filter'] ?? '');
+if (!in_array($filter, ['', 'overdue', 'borrowed', 'returned'], true)) {
+    $filter = '';
+}
 $where  = '';
 if ($filter === 'overdue') {
     $where = "WHERE br.status='borrowed' AND br.due_date < CURDATE()";

@@ -20,9 +20,9 @@ $success = '';
 $error   = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $full_name      = sanitize($conn, $_POST['full_name'] ?? '');
-    $contact_number = sanitize($conn, $_POST['contact_number'] ?? '');
-    $address        = sanitize($conn, $_POST['address'] ?? '');
+    $full_name      = trim($_POST['full_name'] ?? '');
+    $contact_number = trim($_POST['contact_number'] ?? '');
+    $address        = trim($_POST['address'] ?? '');
     $new_pass       = $_POST['new_password'] ?? '';
     $confirm        = $_POST['confirm_password'] ?? '';
     $current_pass   = $_POST['current_password'] ?? '';
@@ -43,14 +43,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (empty($errors)) {
-        $sql = "UPDATE users SET full_name='$full_name', contact_number='$contact_number', address='$address'";
         if ($new_pass !== '') {
             $hashed = password_hash($new_pass, PASSWORD_DEFAULT);
-            $sql .= ", password='$hashed'";
+            dbExecute(
+                $conn,
+                "UPDATE users SET full_name = ?, contact_number = ?, address = ?, password = ? WHERE id = ?",
+                'ssssi',
+                [$full_name, $contact_number, $address, $hashed, $uid]
+            );
+        } else {
+            dbExecute(
+                $conn,
+                "UPDATE users SET full_name = ?, contact_number = ?, address = ? WHERE id = ?",
+                'sssi',
+                [$full_name, $contact_number, $address, $uid]
+            );
         }
-        $sql .= " WHERE id=$uid";
 
-        $conn->query($sql);
         $_SESSION['user_name'] = $full_name;
         $user = getUser($conn, $uid);
 

@@ -5,10 +5,18 @@ requireRole('librarian');
 $pageTitle  = 'Book Catalog';
 $activePage = 'books';
 
-$searchRaw = $_GET['q'] ?? '';
-$search    = sanitize($conn, $searchRaw);
-$where     = $search ? "WHERE title LIKE '%$search%' OR author LIKE '%$search%' OR isbn LIKE '%$search%'" : '';
-$books  = $conn->query("SELECT * FROM books $where ORDER BY title ASC");
+$searchRaw = trim($_GET['q'] ?? '');
+if ($searchRaw !== '') {
+    $like  = '%' . $searchRaw . '%';
+    $books = dbSelect(
+        $conn,
+        "SELECT * FROM books WHERE title LIKE ? OR author LIKE ? OR isbn LIKE ? ORDER BY title ASC",
+        'sss',
+        [$like, $like, $like]
+    );
+} else {
+    $books = $conn->query("SELECT * FROM books ORDER BY title ASC");
+}
 
 require_once '../includes/header.php';
 ?>

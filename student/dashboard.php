@@ -4,19 +4,19 @@ requireRole('student');
 
 $pageTitle  = 'Student Dashboard';
 $activePage = 'dashboard';
-$uid = $_SESSION['user_id'];
+$uid = (int)$_SESSION['user_id'];
 
-$activeBorrows  = $conn->query("SELECT COUNT(*) c FROM borrow_records WHERE user_id=$uid AND status='borrowed'")->fetch_assoc()['c'];
-$totalBorrowed  = $conn->query("SELECT COUNT(*) c FROM borrow_records WHERE user_id=$uid")->fetch_assoc()['c'];
-$overdueCount   = $conn->query("SELECT COUNT(*) c FROM borrow_records WHERE user_id=$uid AND status='borrowed' AND due_date < CURDATE()")->fetch_assoc()['c'];
+$activeBorrows  = (int)dbSelect($conn, "SELECT COUNT(*) c FROM borrow_records WHERE user_id = ? AND status = 'borrowed'", 'i', [$uid])->fetch_assoc()['c'];
+$totalBorrowed  = (int)dbSelect($conn, "SELECT COUNT(*) c FROM borrow_records WHERE user_id = ?", 'i', [$uid])->fetch_assoc()['c'];
+$overdueCount   = (int)dbSelect($conn, "SELECT COUNT(*) c FROM borrow_records WHERE user_id = ? AND status = 'borrowed' AND due_date < CURDATE()", 'i', [$uid])->fetch_assoc()['c'];
 $maxBooks       = MAX_BORROW;
 
-$currentBooks = $conn->query("
+$currentBooks = dbSelect($conn, "
     SELECT br.*, b.title, b.author, b.isbn
     FROM borrow_records br JOIN books b ON br.book_id=b.id
-    WHERE br.user_id=$uid AND br.status='borrowed'
+    WHERE br.user_id = ? AND br.status = 'borrowed'
     ORDER BY br.due_date ASC
-");
+", 'i', [$uid]);
 
 require_once '../includes/header.php';
 ?>

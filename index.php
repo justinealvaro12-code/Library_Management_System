@@ -10,13 +10,13 @@ if (isLoggedIn()) {
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email = sanitize($conn, $_POST['email'] ?? '');
+    $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
 
     if (empty($email) || empty($password)) {
         $error = 'Please enter your email and password.';
     } else {
-        $result = $conn->query("SELECT * FROM users WHERE email = '$email' AND status = 'active'");
+        $result = dbSelect($conn, "SELECT * FROM users WHERE email = ? AND status = 'active'", 's', [$email]);
         if ($result && $row = $result->fetch_assoc()) {
             if (password_verify($password, $row['password'])) {
                 session_regenerate_id(true);

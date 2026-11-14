@@ -82,6 +82,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // HELPER FUNCTIONS
 // ============================================
 
+/**
+ * Run a prepared SELECT and return the resulting statement.
+ * $params values are bound as-is (never pre-escaped).
+ */
+function dbSelect($conn, $sql, $types = '', $params = []) {
+    $stmt = $conn->prepare($sql);
+    if ($types !== '') {
+        $stmt->bind_param($types, ...$params);
+    }
+    $stmt->execute();
+    return $stmt->get_result();
+}
+
+/**
+ * Run a prepared INSERT/UPDATE/DELETE and return the statement.
+ */
+function dbExecute($conn, $sql, $types = '', $params = []) {
+    $stmt = $conn->prepare($sql);
+    if ($types !== '') {
+        $stmt->bind_param($types, ...$params);
+    }
+    $stmt->execute();
+    return $stmt;
+}
+
 function redirect($url) {
     header("Location: $url");
     exit();
@@ -98,7 +123,7 @@ function requireLogin() {
 
     global $conn;
     $uid = (int)$_SESSION['user_id'];
-    $result = $conn->query("SELECT status, role FROM users WHERE id = $uid");
+    $result = dbSelect($conn, "SELECT status, role FROM users WHERE id = ?", 'i', [$uid]);
     $row = $result ? $result->fetch_assoc() : null;
 
     if (!$row || $row['status'] !== 'active') {
@@ -121,22 +146,18 @@ function requireRole($role) {
     }
 }
 
-function sanitize($conn, $data) {
-    return $conn->real_escape_string(trim($data));
-}
-
 function getUser($conn, $id) {
-    $id = (int)$id;
-    $result = $conn->query("SELECT * FROM users WHERE id = $id");
+    $result = dbSelect($conn, "SELECT * FROM users WHERE id = ?", 'i', [(int)$id]);
     return $result ? $result->fetch_assoc() : null;
 }
 
 function logActivity($conn, $user_id, $action, $details = '') {
-    $user_id = (int)$user_id;
-    $action = $conn->real_escape_string($action);
-    $details = $conn->real_escape_string($details);
-    $ip = $conn->real_escape_string($_SERVER['REMOTE_ADDR'] ?? '');
-    $conn->query("INSERT INTO activity_logs (user_id, action, details, ip_address) VALUES ($user_id, '$action', '$details', '$ip')");
+    dbExecute(
+        $conn,
+        "INSERT INTO activity_logs (user_id, action, details, ip_address) VALUES (?, ?, ?, ?)",
+        'isss',
+        [(int)$user_id, (string)$action, (string)$details, $_SERVER['REMOTE_ADDR'] ?? '']
+    );
 }
 
 function daysUntilDue($due) {

@@ -28,13 +28,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $descriptionRaw = trim($_POST['description'] ?? '');
         $year          = $yearRaw === '' ? null : (int)$yearRaw;
 
-        $isbn      = sanitize($conn, $isbnRaw);
-        $title     = sanitize($conn, $titleRaw);
-        $author    = sanitize($conn, $authorRaw);
-        $publisher = sanitize($conn, $publisherRaw);
-        $category  = sanitize($conn, $categoryRaw);
-        $location  = sanitize($conn, $locationRaw);
-        $desc      = sanitize($conn, $descriptionRaw);
+        $isbn      = $isbnRaw;
+        $title     = $titleRaw;
+        $author    = $authorRaw;
+        $publisher = $publisherRaw;
+        $category  = $categoryRaw;
+        $location  = $locationRaw;
+        $desc      = $descriptionRaw;
 
         $errors   = [];
         $borrowed = 0;
@@ -54,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($postAction === 'update') {
-            $borrowed = (int)$conn->query("SELECT COUNT(*) c FROM borrow_records WHERE book_id=$id AND status='borrowed'")->fetch_assoc()['c'];
+            $borrowed = (int)dbSelect($conn, "SELECT COUNT(*) c FROM borrow_records WHERE book_id = ? AND status = 'borrowed'", 'i', [$id])->fetch_assoc()['c'];
             $available = max(0, $copies - $borrowed);
             if ($copies < $borrowed) {
                 $errors[] = "Total copies cannot be less than the $borrowed currently borrowed.";
@@ -80,21 +80,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $msg     = implode(' ', $errors);
             $action  = $postAction === 'add' ? 'add' : 'edit';
         } else {
-            $isbnSql = $isbn !== '' ? "'$isbn'" : "NULL";
-            $yearSql = $year === null ? "NULL" : (string)$year;
+            $isbnSql = $isbn !== '' ? $isbn : null;
 
             try {
                 if ($postAction === 'add') {
-                    $conn->query("INSERT INTO books (isbn, title, author, publisher, category, year_published, total_copies, available_copies, location, description)
-                        VALUES ($isbnSql, '$title', '$author', '$publisher', '$category', $yearSql, $copies, $copies, '$location', '$desc')");
+                    dbExecute(
+                        $conn,
+                        "INSERT INTO books (isbn, title, author, publisher, category, year_published, total_copies, available_copies, location, description)
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                        'sssssiiiss',
+                        [$isbnSql, $title, $author, $publisher, $category, $year, $copies, $copies, $location, $desc]
+                    );
                     logActivity($conn, $_SESSION['user_id'], 'add_book', "Added: $title");
                     header("Location: books.php?msg=added");
                     exit();
                 }
 
-                $conn->query("UPDATE books SET isbn=$isbnSql, title='$title', author='$author', publisher='$publisher',
-                    category='$category', year_published=$yearSql, total_copies=$copies, available_copies=$available,
-                    location='$location', description='$desc' WHERE id=$id");
+                dbExecute(
+                    $conn,
+                    "UPDATE books SET isbn = ?, title = ?, author = ?, publisher = ?, category = ?, year_published = ?,
+                     total_copies = ?, available_copies = ?, location = ?, description = ? WHERE id = ?",
+                    'sssssiiissi',
+                    [$isbnSql, $title, $author, $publisher, $category, $year, $copies, $available, $location, $desc, $id]
+                );
                 logActivity($conn, $_SESSION['user_id'], 'update_book', "Updated: $title");
                 header("Location: books.php?msg=updated");
                 exit();
@@ -108,14 +116,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } elseif ($postAction === 'delete') {
         $id       = (int)($_POST['id'] ?? 0);
-        $borrowed = (int)$conn->query("SELECT COUNT(*) c FROM borrow_records WHERE book_id=$id AND status='borrowed'")->fetch_assoc()['c'];
+        $borrowed = (int)dbSelect($conn, "SELECT COUNT(*) c FROM borrow_records WHERE book_id = ? AND status = 'borrowed'", 'i', [$id])->fetch_assoc()['c'];
 
         if ($borrowed > 0) {
             $msgType = 'danger';
             $msg     = "Cannot delete this book: $borrowed copy/copies are still borrowed.";
         } else {
             try {
-                $conn->query("DELETE FROM books WHERE id=$id");
+                dbExecute($conn, "DELETE FROM books WHERE id = ?", 'i', [$id]);
                 logActivity($conn, $_SESSION['user_id'], 'delete_book', "Deleted book #$id");
                 header("Location: books.php?msg=deleted");
                 exit();
@@ -129,13 +137,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Load book for editing via GET
 if ($action === 'edit' && $editBook === null && isset($_GET['id'])) {
-    $editBook = $conn->query("SELECT * FROM books WHERE id=" . (int)$_GET['id'])->fetch_assoc();
+    $editBook = dbSelect($conn, "SELECT * FROM books WHERE id = ?", 'i', [(int)$_GET['id']])->fetch_assoc();
 }
 
-$searchRaw = $_GET['q'] ?? '';
-$search    = sanitize($conn, $searchRaw);
-$where     = $search ? "WHERE title LIKE '%$search%' OR author LIKE '%$search%' OR isbn LIKE '%$search%'" : '';
-$books     = $conn->query("SELECT * FROM books $where ORDER BY title ASC");
+$searchRaw = trim($_GET['q'] ?? '');
+if ($searchRaw !== '') {
+    $like  = '%' . $searchRaw . '%';
+    $books = dbSelect(
+        $conn,
+        "SELECT * FROM books WHERE title LIKE ? OR author LIKE ? OR isbn LIKE ? ORDER BY title ASC",
+        'sss',
+        [$like, $like, $like]
+    );
+} else {
+    $books = $conn->query("SELECT * FROM books ORDER BY title ASC");
+}
 
 if ($msg === '' && isset($_GET['msg'])) {
     $map = ['added' => 'Book added.', 'deleted' => 'Book deleted.', 'updated' => 'Book updated.'];

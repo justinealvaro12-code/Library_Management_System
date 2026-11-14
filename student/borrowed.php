@@ -4,14 +4,14 @@ requireRole('student');
 
 $pageTitle  = 'My Borrowed Books';
 $activePage = 'borrowed';
-$uid = $_SESSION['user_id'];
+$uid = (int)$_SESSION['user_id'];
 
-$borrowed = $conn->query("
+$borrowed = dbSelect($conn, "
     SELECT br.*, b.title, b.author, b.isbn, b.category
     FROM borrow_records br JOIN books b ON br.book_id=b.id
-    WHERE br.user_id=$uid AND br.status='borrowed'
+    WHERE br.user_id = ? AND br.status = 'borrowed'
     ORDER BY br.due_date ASC
-");
+", 'i', [$uid]);
 
 require_once '../includes/header.php';
 ?>

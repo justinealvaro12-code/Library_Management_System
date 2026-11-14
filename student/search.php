@@ -5,15 +5,24 @@ requireRole('student');
 $pageTitle  = 'Search Books';
 $activePage = 'search';
 
-$searchRaw   = $_GET['q'] ?? '';
-$categoryRaw = $_GET['cat'] ?? '';
-$search      = sanitize($conn, $searchRaw);
-$category    = sanitize($conn, $categoryRaw);
+$searchRaw   = trim($_GET['q'] ?? '');
+$categoryRaw = trim($_GET['cat'] ?? '');
 $where       = "WHERE 1=1";
-if ($search)   $where .= " AND (title LIKE '%$search%' OR author LIKE '%$search%' OR isbn LIKE '%$search%')";
-if ($category) $where .= " AND category='$category'";
+$types       = '';
+$params      = [];
+if ($searchRaw !== '') {
+    $like    = '%' . $searchRaw . '%';
+    $where  .= " AND (title LIKE ? OR author LIKE ? OR isbn LIKE ?)";
+    $types  .= 'sss';
+    $params = array_merge($params, [$like, $like, $like]);
+}
+if ($categoryRaw !== '') {
+    $where  .= " AND category = ?";
+    $types  .= 's';
+    $params[] = $categoryRaw;
+}
 
-$books      = $conn->query("SELECT * FROM books $where ORDER BY title ASC");
+$books      = dbSelect($conn, "SELECT * FROM books $where ORDER BY title ASC", $types, $params);
 $categories = $conn->query("SELECT DISTINCT category FROM books ORDER BY category");
 
 require_once '../includes/header.php';

@@ -14,8 +14,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $lib_id  = $_SESSION['user_id'];
     $issue   = date('Y-m-d');
 
-    $student = $conn->query("SELECT id FROM users WHERE id=$user_id AND status='active' AND role='student'")->fetch_assoc();
-    $book    = $book_id > 0 ? $conn->query("SELECT * FROM books WHERE id=$book_id")->fetch_assoc() : null;
+    $student = dbSelect($conn, "SELECT id FROM users WHERE id = ? AND status = 'active' AND role = 'student'", 'i', [$user_id])->fetch_assoc();
+    $book    = $book_id > 0 ? dbSelect($conn, "SELECT * FROM books WHERE id = ?", 'i', [$book_id])->fetch_assoc() : null;
 
     if (!$student) {
         $msg = 'error:Please select an active student.';
@@ -24,8 +24,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($days < 1 || $days > 60) {
         $msg = 'error:Loan period must be between 1 and 60 days.';
     } else {
-        $alreadyBorrowed = (int)$conn->query("SELECT COUNT(*) c FROM borrow_records WHERE user_id=$user_id AND book_id=$book_id AND status='borrowed'")->fetch_assoc()['c'];
-        $current         = (int)$conn->query("SELECT COUNT(*) c FROM borrow_records WHERE user_id=$user_id AND status='borrowed'")->fetch_assoc()['c'];
+        $alreadyBorrowed = (int)dbSelect($conn, "SELECT COUNT(*) c FROM borrow_records WHERE user_id = ? AND book_id = ? AND status = 'borrowed'", 'ii', [$user_id, $book_id])->fetch_assoc()['c'];
+        $current         = (int)dbSelect($conn, "SELECT COUNT(*) c FROM borrow_records WHERE user_id = ? AND status = 'borrowed'", 'i', [$user_id])->fetch_assoc()['c'];
 
         if ($alreadyBorrowed > 0) {
             $msg = 'error:This student already has this book borrowed.';
@@ -36,12 +36,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $conn->begin_transaction();
             try {
-                $conn->query("UPDATE books SET available_copies = available_copies - 1 WHERE id=$book_id AND available_copies > 0");
-                if ($conn->affected_rows !== 1) {
+                $update = dbExecute($conn, "UPDATE books SET available_copies = available_copies - 1 WHERE id = ? AND available_copies > 0", 'i', [$book_id]);
+                if ($update->affected_rows !== 1) {
                     throw new Exception('No available copies of this book.');
                 }
 
-                $conn->query("INSERT INTO borrow_records (user_id, book_id, issue_date, due_date, issued_by) VALUES ($user_id, $book_id, '$issue', '$due', $lib_id)");
+                dbExecute(
+                    $conn,
+                    "INSERT INTO borrow_records (user_id, book_id, issue_date, due_date, issued_by) VALUES (?, ?, ?, ?, ?)",
+                    'iissi',
+                    [$user_id, $book_id, $issue, $due, (int)$lib_id]
+                );
                 $conn->commit();
 
                 $bname = $book['title'];

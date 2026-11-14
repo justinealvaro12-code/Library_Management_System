@@ -4,17 +4,17 @@ requireRole('student');
 
 $pageTitle  = 'Borrowing History';
 $activePage = 'history';
-$uid = $_SESSION['user_id'];
+$uid = (int)$_SESSION['user_id'];
 
-$history = $conn->query("
+$history = dbSelect($conn, "
     SELECT br.*, b.title, b.author, b.category
     FROM borrow_records br JOIN books b ON br.book_id=b.id
-    WHERE br.user_id=$uid
+    WHERE br.user_id = ?
     ORDER BY br.created_at DESC
-");
+", 'i', [$uid]);
 
-$total       = $conn->query("SELECT COUNT(*) c FROM borrow_records WHERE user_id=$uid")->fetch_assoc()['c'];
-$totalFines  = $conn->query("SELECT COALESCE(SUM(fine_amount),0) s FROM borrow_records WHERE user_id=$uid")->fetch_assoc()['s'];
+$total       = (int)dbSelect($conn, "SELECT COUNT(*) c FROM borrow_records WHERE user_id = ?", 'i', [$uid])->fetch_assoc()['c'];
+$totalFines  = dbSelect($conn, "SELECT COALESCE(SUM(fine_amount),0) s FROM borrow_records WHERE user_id = ?", 'i', [$uid])->fetch_assoc()['s'];
 
 require_once '../includes/header.php';
 ?>

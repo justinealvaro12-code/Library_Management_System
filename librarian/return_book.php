@@ -14,7 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $conn->begin_transaction();
     try {
-        $result = $conn->query("SELECT * FROM borrow_records WHERE id=$borrow_id AND status='borrowed' FOR UPDATE");
+        $result = dbSelect($conn, "SELECT * FROM borrow_records WHERE id = ? AND status = 'borrowed' FOR UPDATE", 'i', [$borrow_id]);
         $record = $result->fetch_assoc();
 
         if (!$record) {
@@ -24,8 +24,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $fine    = calculateFine($record['due_date']);
         $fineStr = number_format($fine, 2, '.', '');
 
-        $conn->query("UPDATE borrow_records SET status='returned', return_date='$today', fine_amount=$fineStr, received_by=$lib_id WHERE id=$borrow_id AND status='borrowed'");
-        $conn->query("UPDATE books SET available_copies = LEAST(total_copies, available_copies + 1) WHERE id={$record['book_id']}");
+        dbExecute(
+            $conn,
+            "UPDATE borrow_records SET status='returned', return_date = ?, fine_amount = ?, received_by = ? WHERE id = ? AND status='borrowed'",
+            'ssii',
+            [$today, $fineStr, (int)$lib_id, $borrow_id]
+        );
+        dbExecute($conn, "UPDATE books SET available_copies = LEAST(total_copies, available_copies + 1) WHERE id = ?", 'i', [(int)$record['book_id']]);
         $conn->commit();
 
         logActivity($conn, $lib_id, 'return_book', "Returned borrow #$borrow_id");

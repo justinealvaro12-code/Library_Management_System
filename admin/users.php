@@ -25,10 +25,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $passRaw   = $_POST['password'] ?? '';
         $phoneRaw  = trim($_POST['contact_number'] ?? '');
 
-        $sid   = sanitize($conn, $sidRaw);
-        $name  = sanitize($conn, $nameRaw);
-        $email = sanitize($conn, $emailRaw);
-        $phone = sanitize($conn, $phoneRaw);
+        $sid   = $sidRaw;
+        $name  = $nameRaw;
+        $email = $emailRaw;
+        $phone = $phoneRaw;
         $role  = $roleRaw;
 
         $errors = [];
@@ -62,11 +62,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $action  = 'add';
         } else {
             $pass   = password_hash($passRaw, PASSWORD_DEFAULT);
-            $sidVal = $sid !== '' ? "'$sid'" : "NULL";
+            $sidVal = $sid !== '' ? $sid : null;
 
             try {
-                $conn->query("INSERT INTO users (student_id, full_name, email, password, role, contact_number)
-                              VALUES ($sidVal, '$name', '$email', '$pass', '$role', '$phone')");
+                dbExecute(
+                    $conn,
+                    "INSERT INTO users (student_id, full_name, email, password, role, contact_number)
+                     VALUES (?, ?, ?, ?, ?, ?)",
+                    'ssssss',
+                    [$sidVal, $name, $email, $pass, $role, $phone]
+                );
                 logActivity($conn, $_SESSION['user_id'], 'add_user', "Added user: $name ($role)");
                 header("Location: users.php?msg=added");
                 exit();
@@ -85,7 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $msgType = 'danger';
             $msg     = 'You cannot disable your own account.';
         } else {
-            $conn->query("UPDATE users SET status = IF(status='active','inactive','active') WHERE id=$id");
+            dbExecute($conn, "UPDATE users SET status = IF(status='active','inactive','active') WHERE id = ?", 'i', [$id]);
             logActivity($conn, $_SESSION['user_id'], 'toggle_user', "Toggled status for user #$id");
             header("Location: users.php?msg=updated");
             exit();
@@ -97,14 +102,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $msgType = 'danger';
             $msg     = 'You cannot delete your own account.';
         } else {
-            $borrowed = (int)$conn->query("SELECT COUNT(*) c FROM borrow_records WHERE user_id=$id AND status='borrowed'")->fetch_assoc()['c'];
+            $borrowed = (int)dbSelect($conn, "SELECT COUNT(*) c FROM borrow_records WHERE user_id = ? AND status = 'borrowed'", 'i', [$id])->fetch_assoc()['c'];
 
             if ($borrowed > 0) {
                 $msgType = 'danger';
                 $msg     = "Cannot delete this user: they still have $borrowed borrowed book(s).";
             } else {
                 try {
-                    $conn->query("DELETE FROM users WHERE id=$id");
+                    dbExecute($conn, "DELETE FROM users WHERE id = ?", 'i', [$id]);
                     logActivity($conn, $_SESSION['user_id'], 'delete_user', "Deleted user #$id");
                     header("Location: users.php?msg=deleted");
                     exit();
@@ -124,7 +129,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $plain  = bin2hex(random_bytes(4));
             $hash   = password_hash($plain, PASSWORD_DEFAULT);
-            $conn->query("UPDATE users SET password='$hash' WHERE id=$id");
+            dbExecute($conn, "UPDATE users SET password = ? WHERE id = ?", 'si', [$hash, $id]);
             logActivity($conn, $_SESSION['user_id'], 'reset_password', "Reset password for user #$id");
             $resetPassword = $plain;
             $resetName     = $user['full_name'];
@@ -132,9 +137,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$role_filter = sanitize($conn, $_GET['role'] ?? '');
-$where       = $role_filter ? "WHERE role='$role_filter'" : '';
-$users       = $conn->query("SELECT * FROM users $where ORDER BY role, full_name");
+$role_filter = trim($_GET['role'] ?? '');
+if (!in_array($role_filter, $allowedRoles, true)) {
+    $role_filter = '';
+}
+if ($role_filter !== '') {
+    $users = dbSelect($conn, "SELECT * FROM users WHERE role = ? ORDER BY role, full_name", 's', [$role_filter]);
+} else {
+    $users = $conn->query("SELECT * FROM users ORDER BY role, full_name");
+}
 
 if ($msg === '' && isset($_GET['msg'])) {
     $map = ['added' => 'User added.', 'deleted' => 'User deleted.', 'updated' => 'Status updated.'];
