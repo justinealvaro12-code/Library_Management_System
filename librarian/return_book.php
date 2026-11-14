@@ -30,7 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'ssii',
             [$today, $fineStr, (int)$lib_id, $borrow_id]
         );
-        dbExecute($conn, "UPDATE books SET available_copies = LEAST(total_copies, available_copies + 1) WHERE id = ?", 'i', [(int)$record['book_id']]);
+        dbExecute($conn, "UPDATE books SET available_copies = LEAST(total_copies, available_copies + 1), status = 'available' WHERE id = ?", 'i', [(int)$record['book_id']]);
         $conn->commit();
 
         logActivity($conn, $lib_id, 'return_book', "Returned borrow #$borrow_id");

@@ -36,7 +36,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $conn->begin_transaction();
             try {
-                $update = dbExecute($conn, "UPDATE books SET available_copies = available_copies - 1 WHERE id = ? AND available_copies > 0", 'i', [$book_id]);
+                // Lock the student row so concurrent issues cannot bypass the limit.
+                dbSelect($conn, "SELECT id FROM users WHERE id = ? FOR UPDATE", 'i', [$user_id]);
+                $alreadyBorrowed = (int)dbSelect($conn, "SELECT COUNT(*) c FROM borrow_records WHERE user_id = ? AND book_id = ? AND status = 'borrowed'", 'ii', [$user_id, $book_id])->fetch_assoc()['c'];
+                $current         = (int)dbSelect($conn, "SELECT COUNT(*) c FROM borrow_records WHERE user_id = ? AND status = 'borrowed'", 'i', [$user_id])->fetch_assoc()['c'];
+
+                if ($alreadyBorrowed > 0) {
+                    throw new Exception('This student already has this book borrowed.');
+                }
+                if ($current >= MAX_BORROW) {
+                    throw new Exception('Student has already borrowed the maximum of ' . MAX_BORROW . ' books.');
+                }
+
+                $update = dbExecute(
+                    $conn,
+                    "UPDATE books SET available_copies = available_copies - 1, status = IF(available_copies > 1, 'available', 'unavailable')
+                     WHERE id = ? AND available_copies > 0",
+                    'i',
+                    [$book_id]
+                );
                 if ($update->affected_rows !== 1) {
                     throw new Exception('No available copies of this book.');
                 }

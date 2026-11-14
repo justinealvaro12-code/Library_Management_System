@@ -53,12 +53,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $errors[] = 'Year published must be between 1000 and ' . ((int)date('Y') + 1) . '.';
         }
 
+        $status = 'available';
+
         if ($postAction === 'update') {
-            $borrowed = (int)dbSelect($conn, "SELECT COUNT(*) c FROM borrow_records WHERE book_id = ? AND status = 'borrowed'", 'i', [$id])->fetch_assoc()['c'];
-            $available = max(0, $copies - $borrowed);
-            if ($copies < $borrowed) {
-                $errors[] = "Total copies cannot be less than the $borrowed currently borrowed.";
+            $currentBook = dbSelect($conn, "SELECT total_copies, available_copies FROM books WHERE id = ?", 'i', [$id])->fetch_assoc();
+            $borrowed    = (int)dbSelect($conn, "SELECT COUNT(*) c FROM borrow_records WHERE book_id = ? AND status = 'borrowed'", 'i', [$id])->fetch_assoc()['c'];
+
+            if (!$currentBook) {
+                $errors[] = 'Book not found.';
+            } else {
+                $available = max(0, min($copies, (int)$currentBook['available_copies'] + ($copies - (int)$currentBook['total_copies'])));
+                if ($copies < $borrowed) {
+                    $errors[] = "Total copies cannot be less than the $borrowed currently borrowed.";
+                }
             }
+
+            $status = $available > 0 ? 'available' : 'unavailable';
         }
 
         $editBook = [
@@ -86,10 +96,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($postAction === 'add') {
                     dbExecute(
                         $conn,
-                        "INSERT INTO books (isbn, title, author, publisher, category, year_published, total_copies, available_copies, location, description)
-                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                        'sssssiiiss',
-                        [$isbnSql, $title, $author, $publisher, $category, $year, $copies, $copies, $location, $desc]
+                        "INSERT INTO books (isbn, title, author, publisher, category, year_published, total_copies, available_copies, location, description, status)
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                        'sssssiiisss',
+                        [$isbnSql, $title, $author, $publisher, $category, $year, $copies, $copies, $location, $desc, $status]
                     );
                     logActivity($conn, $_SESSION['user_id'], 'add_book', "Added: $title");
                     header("Location: books.php?msg=added");
@@ -99,9 +109,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 dbExecute(
                     $conn,
                     "UPDATE books SET isbn = ?, title = ?, author = ?, publisher = ?, category = ?, year_published = ?,
-                     total_copies = ?, available_copies = ?, location = ?, description = ? WHERE id = ?",
-                    'sssssiiissi',
-                    [$isbnSql, $title, $author, $publisher, $category, $year, $copies, $available, $location, $desc, $id]
+                     total_copies = ?, available_copies = ?, location = ?, description = ?, status = ? WHERE id = ?",
+                    'sssssiiisssi',
+                    [$isbnSql, $title, $author, $publisher, $category, $year, $copies, $available, $location, $desc, $status, $id]
                 );
                 logActivity($conn, $_SESSION['user_id'], 'update_book', "Updated: $title");
                 header("Location: books.php?msg=updated");
@@ -115,12 +125,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     } elseif ($postAction === 'delete') {
-        $id       = (int)($_POST['id'] ?? 0);
-        $borrowed = (int)dbSelect($conn, "SELECT COUNT(*) c FROM borrow_records WHERE book_id = ? AND status = 'borrowed'", 'i', [$id])->fetch_assoc()['c'];
+        $id      = (int)($_POST['id'] ?? 0);
+        $records = (int)dbSelect($conn, "SELECT COUNT(*) c FROM borrow_records WHERE book_id = ?", 'i', [$id])->fetch_assoc()['c'];
 
-        if ($borrowed > 0) {
+        if ($records > 0) {
             $msgType = 'danger';
-            $msg     = "Cannot delete this book: $borrowed copy/copies are still borrowed.";
+            $msg     = "Cannot delete this book: it has $records borrowing record(s) in the system. Consider marking it Unavailable instead.";
         } else {
             try {
                 dbExecute($conn, "DELETE FROM books WHERE id = ?", 'i', [$id]);

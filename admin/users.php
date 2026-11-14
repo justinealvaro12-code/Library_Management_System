@@ -41,10 +41,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!in_array($roleRaw, $allowedRoles, true)) {
             $errors[] = 'Invalid role selected.';
         }
-        if ($passRaw === '') {
-            $passRaw = 'password';
+        if ($sidRaw !== '' && !preg_match('/^[A-Za-z0-9-]{4,20}$/', $sidRaw)) {
+            $errors[] = 'Student ID must be 4-20 characters using letters, numbers, or dashes.';
         }
-        if (strlen($passRaw) < 6) {
+        if ($passRaw === '') {
+            $errors[] = 'Password is required.';
+        } elseif (strlen($passRaw) < 6) {
             $errors[] = 'Password must be at least 6 characters.';
         }
 
@@ -84,29 +86,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     } elseif ($postAction === 'toggle') {
-        $id = (int)($_POST['id'] ?? 0);
+        $id     = (int)($_POST['id'] ?? 0);
+        $target = getUser($conn, $id);
 
         if ($id === (int)$_SESSION['user_id']) {
             $msgType = 'danger';
             $msg     = 'You cannot disable your own account.';
+        } elseif (!$target) {
+            $msgType = 'danger';
+            $msg     = 'User not found.';
         } else {
-            dbExecute($conn, "UPDATE users SET status = IF(status='active','inactive','active') WHERE id = ?", 'i', [$id]);
-            logActivity($conn, $_SESSION['user_id'], 'toggle_user', "Toggled status for user #$id");
-            header("Location: users.php?msg=updated");
-            exit();
+            $lastActiveAdmin = false;
+            if ($target['role'] === 'admin' && $target['status'] === 'active') {
+                $otherAdmins = (int)dbSelect($conn, "SELECT COUNT(*) c FROM users WHERE role = 'admin' AND status = 'active' AND id <> ?", 'i', [$id])->fetch_assoc()['c'];
+                $lastActiveAdmin = ($otherAdmins === 0);
+            }
+
+            if ($lastActiveAdmin) {
+                $msgType = 'danger';
+                $msg     = 'Cannot disable the last active administrator.';
+            } else {
+                dbExecute($conn, "UPDATE users SET status = IF(status='active','inactive','active') WHERE id = ?", 'i', [$id]);
+                logActivity($conn, $_SESSION['user_id'], 'toggle_user', "Toggled status for user #$id");
+                header("Location: users.php?msg=updated");
+                exit();
+            }
         }
     } elseif ($postAction === 'delete') {
-        $id = (int)($_POST['id'] ?? 0);
+        $id     = (int)($_POST['id'] ?? 0);
+        $target = getUser($conn, $id);
 
         if ($id === (int)$_SESSION['user_id']) {
             $msgType = 'danger';
             $msg     = 'You cannot delete your own account.';
+        } elseif (!$target) {
+            $msgType = 'danger';
+            $msg     = 'User not found.';
         } else {
-            $borrowed = (int)dbSelect($conn, "SELECT COUNT(*) c FROM borrow_records WHERE user_id = ? AND status = 'borrowed'", 'i', [$id])->fetch_assoc()['c'];
+            $records = (int)dbSelect($conn, "SELECT COUNT(*) c FROM borrow_records WHERE user_id = ?", 'i', [$id])->fetch_assoc()['c'];
 
-            if ($borrowed > 0) {
+            $lastActiveAdmin = false;
+            if ($target['role'] === 'admin' && $target['status'] === 'active') {
+                $otherAdmins = (int)dbSelect($conn, "SELECT COUNT(*) c FROM users WHERE role = 'admin' AND status = 'active' AND id <> ?", 'i', [$id])->fetch_assoc()['c'];
+                $lastActiveAdmin = ($otherAdmins === 0);
+            }
+
+            if ($records > 0) {
                 $msgType = 'danger';
-                $msg     = "Cannot delete this user: they still have $borrowed borrowed book(s).";
+                $msg     = "Cannot delete this user: they have $records borrowing record(s) in the system. Consider disabling the account instead.";
+            } elseif ($lastActiveAdmin) {
+                $msgType = 'danger';
+                $msg     = 'Cannot delete the last active administrator.';
             } else {
                 try {
                     dbExecute($conn, "DELETE FROM users WHERE id = ?", 'i', [$id]);
@@ -217,8 +247,8 @@ require_once '../includes/header.php';
         <input type="text" name="contact_number" class="form-control" value="<?= htmlspecialchars($formValues['contact_number'] ?? '') ?>">
       </div>
       <div class="form-group">
-        <label>Password</label>
-        <input type="password" name="password" class="form-control" placeholder="Default: password">
+        <label>Password *</label>
+        <input type="password" name="password" class="form-control" placeholder="Minimum 6 characters" required>
       </div>
     </div>
     <div style="display:flex;gap:10px">
