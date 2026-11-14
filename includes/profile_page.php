@@ -1,4 +1,8 @@
 <?php
+if (!defined('SITE_URL')) {
+    http_response_code(403);
+    exit('Forbidden');
+}
 $pageTitle  = 'My Profile';
 $activePage = 'profile';
 $uid        = (int)$_SESSION['user_id'];
@@ -43,29 +47,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (empty($errors)) {
-        if ($new_pass !== '') {
-            $hashed = password_hash($new_pass, PASSWORD_DEFAULT);
-            dbExecute(
-                $conn,
-                "UPDATE users SET full_name = ?, contact_number = ?, address = ?, password = ? WHERE id = ?",
-                'ssssi',
-                [$full_name, $contact_number, $address, $hashed, $uid]
-            );
-        } else {
-            dbExecute(
-                $conn,
-                "UPDATE users SET full_name = ?, contact_number = ?, address = ? WHERE id = ?",
-                'sssi',
-                [$full_name, $contact_number, $address, $uid]
-            );
+        try {
+            if ($new_pass !== '') {
+                $hashed = password_hash($new_pass, PASSWORD_DEFAULT);
+                dbExecute(
+                    $conn,
+                    "UPDATE users SET full_name = ?, contact_number = ?, address = ?, password = ? WHERE id = ?",
+                    'ssssi',
+                    [$full_name, $contact_number, $address, $hashed, $uid]
+                );
+            } else {
+                dbExecute(
+                    $conn,
+                    "UPDATE users SET full_name = ?, contact_number = ?, address = ? WHERE id = ?",
+                    'sssi',
+                    [$full_name, $contact_number, $address, $uid]
+                );
+            }
+
+            $user = getUser($conn, $uid);
+            $_SESSION['user_name'] = $user['full_name'];
+
+            $success = $new_pass !== ''
+                ? 'Profile and password updated successfully.'
+                : 'Profile updated successfully.';
+        } catch (mysqli_sql_exception $e) {
+            error_log('LMS profile update failed: ' . $e->getMessage());
+            $error = 'Unable to update your profile. Please try again.';
         }
-
-        $_SESSION['user_name'] = $full_name;
-        $user = getUser($conn, $uid);
-
-        $success = $new_pass !== ''
-            ? 'Profile and password updated successfully.'
-            : 'Profile updated successfully.';
     } else {
         $error = implode(' ', $errors);
     }

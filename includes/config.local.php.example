@@ -1,0 +1,10 @@
+<?php
+// Copy this file to config.local.php to override the defaults in config.php.
+// config.local.php is gitignored and will never be committed.
+//
+// define('DB_HOST', 'localhost');
+// define('DB_USER', 'root');
+// define('DB_PASS', '');
+// define('DB_NAME', 'lms_rmc');
+// define('SITE_NAME', 'RMC Library Management System');
+// define('SITE_URL', 'http://localhost/lms');

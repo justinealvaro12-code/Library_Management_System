@@ -1,4 +1,8 @@
 <?php
+if (!defined('SITE_URL')) {
+    http_response_code(403);
+    exit('Forbidden');
+}
 // includes/header.php — call with $pageTitle and $activePage set
 $role = $_SESSION['user_role'] ?? '';
 $name = $_SESSION['user_name'] ?? '';

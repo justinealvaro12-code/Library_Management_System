@@ -1,16 +1,22 @@
 <?php
+// Optional local overrides (gitignored). See config.local.php.example.
+$configLocal = __DIR__ . '/config.local.php';
+if (is_file($configLocal)) {
+    require $configLocal;
+}
+
 // ============================================
 // DATABASE CONFIGURATION
 // ============================================
 date_default_timezone_set('Asia/Manila');
 
-define('DB_HOST', 'localhost');
-define('DB_USER', 'root');       // Default XAMPP username
-define('DB_PASS', '');           // Default XAMPP password (empty)
-define('DB_NAME', 'lms_rmc');
-
-define('SITE_NAME', 'RMC Library Management System');
-define('SITE_URL', 'http://localhost/lms');
+// XAMPP defaults; override them in config.local.php if needed.
+if (!defined('DB_HOST'))   define('DB_HOST', 'localhost');
+if (!defined('DB_USER'))   define('DB_USER', 'root');
+if (!defined('DB_PASS'))   define('DB_PASS', '');
+if (!defined('DB_NAME'))   define('DB_NAME', 'lms_rmc');
+if (!defined('SITE_NAME')) define('SITE_NAME', 'RMC Library Management System');
+if (!defined('SITE_URL'))  define('SITE_URL', 'http://localhost/lms');
 
 // ============================================
 // DATABASE CONNECTION (MySQLi)
@@ -22,13 +28,12 @@ try {
     $conn->set_charset("utf8mb4");
     $conn->query("SET time_zone = '+08:00'");
 } catch (mysqli_sql_exception $e) {
+    error_log('LMS database connection failed: ' . $e->getMessage());
     die("
     <div style='font-family:sans-serif;max-width:500px;margin:80px auto;padding:30px;border:2px solid #e74c3c;border-radius:8px;background:#fff5f5;'>
         <h2 style='color:#e74c3c;'>Database Connection Failed</h2>
-        <p><strong>Error:</strong> " . htmlspecialchars($e->getMessage()) . "</p>
-        <hr>
         <p>Make sure XAMPP is running and the database <code>lms_rmc</code> has been imported.</p>
-        <p>See the setup guide for instructions.</p>
+        <p>If the problem continues, please contact the administrator.</p>
     </div>");
 }
 
@@ -52,7 +57,20 @@ define('LIBRARY_NAME', !empty($settings['library_name']) ? $settings['library_na
 if (session_status() === PHP_SESSION_NONE) {
     ini_set('session.cookie_httponly', '1');
     ini_set('session.cookie_samesite', 'Lax');
+    ini_set('session.cookie_secure', (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? '1' : '0');
     session_start();
+}
+
+/**
+ * Fully destroy the current session, including its cookie.
+ */
+function destroySession() {
+    $_SESSION = [];
+    if (ini_get('session.use_cookies')) {
+        $params = session_get_cookie_params();
+        setcookie(session_name(), '', time() - 42000, $params['path'], $params['domain'], $params['secure'], $params['httponly']);
+    }
+    session_destroy();
 }
 
 // ============================================
@@ -127,12 +145,7 @@ function requireLogin() {
     $row = $result ? $result->fetch_assoc() : null;
 
     if (!$row || $row['status'] !== 'active') {
-        $_SESSION = [];
-        if (ini_get('session.use_cookies')) {
-            $params = session_get_cookie_params();
-            setcookie(session_name(), '', time() - 42000, $params['path'], $params['domain'], $params['secure'], $params['httponly']);
-        }
-        session_destroy();
+        destroySession();
         redirect(SITE_URL . '/index.php?error=disabled');
     }
 
