@@ -77,6 +77,7 @@ require_once '../includes/header.php';
   <div class="card">
     <div class="card-title">Issue Form</div>
     <form method="POST">
+      <?= csrfField() ?>
       <div class="form-group">
         <label>Student *</label>
         <select name="user_id" class="form-control" required>

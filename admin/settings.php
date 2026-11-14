@@ -82,6 +82,7 @@ require_once '../includes/header.php';
 
 <div class="card" style="max-width:600px">
   <form method="POST">
+    <?= csrfField() ?>
     <div class="form-group">
       <label>Library Name</label>
       <input type="text" name="library_name" class="form-control" value="<?= htmlspecialchars($settings['library_name'] ?? '') ?>">

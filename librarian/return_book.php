@@ -102,6 +102,7 @@ require_once '../includes/header.php';
           </td>
           <td>
             <form method="POST" onsubmit="return confirm('Process return for <?= htmlspecialchars(addslashes($r['full_name'])) ?>?')">
+              <?= csrfField() ?>
               <input type="hidden" name="borrow_id" value="<?= $r['id'] ?>">
               <button type="submit" class="btn btn-sm btn-primary">Process Return</button>
             </form>

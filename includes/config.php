@@ -56,6 +56,29 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 // ============================================
+// CSRF PROTECTION
+// ============================================
+function csrfToken() {
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    return $_SESSION['csrf_token'];
+}
+
+function csrfField() {
+    return '<input type="hidden" name="csrf_token" value="' . htmlspecialchars(csrfToken()) . '">';
+}
+
+// Verify the token on every POST request before any action runs.
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $csrfToken = $_POST['csrf_token'] ?? '';
+    if (!is_string($csrfToken) || !hash_equals(csrfToken(), $csrfToken)) {
+        http_response_code(403);
+        exit('Invalid or expired security token. Please go back and try again.');
+    }
+}
+
+// ============================================
 // HELPER FUNCTIONS
 // ============================================
 

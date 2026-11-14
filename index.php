@@ -267,6 +267,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <?php endif; ?>
 
   <form method="POST">
+    <?= csrfField() ?>
     <div class="form-group">
       <label>Email Address</label>
       <input type="email" name="email" placeholder="you@rmc.edu.ph" required value="<?= htmlspecialchars($_POST['email'] ?? '') ?>">

@@ -178,6 +178,7 @@ require_once '../includes/header.php';
 <div class="card" style="margin-bottom:24px;">
   <div class="card-title">Add New User</div>
   <form method="POST">
+    <?= csrfField() ?>
     <input type="hidden" name="action" value="add">
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
       <div class="form-group">
@@ -246,18 +247,21 @@ require_once '../includes/header.php';
           <td>
             <?php if ((int)$u['id'] !== (int)$_SESSION['user_id']): ?>
             <form method="POST" style="display:inline">
+              <?= csrfField() ?>
               <input type="hidden" name="action" value="toggle">
               <input type="hidden" name="id" value="<?= $u['id'] ?>">
               <button type="submit" class="btn btn-sm btn-outline"><?= $u['status']==='active'?'Disable':'Enable' ?></button>
             </form>
             <?php endif; ?>
             <form method="POST" style="display:inline" onsubmit="return confirm('Reset the password for <?= htmlspecialchars(addslashes($u['full_name'])) ?>?')">
+              <?= csrfField() ?>
               <input type="hidden" name="action" value="reset_password">
               <input type="hidden" name="id" value="<?= $u['id'] ?>">
               <button type="submit" class="btn btn-sm btn-outline">Reset PW</button>
             </form>
             <?php if ((int)$u['id'] !== (int)$_SESSION['user_id']): ?>
             <form method="POST" style="display:inline" onsubmit="return confirm('Delete this user?')">
+              <?= csrfField() ?>
               <input type="hidden" name="action" value="delete">
               <input type="hidden" name="id" value="<?= $u['id'] ?>">
               <button type="submit" class="btn btn-sm btn-danger">Del</button>

@@ -108,6 +108,7 @@ require_once __DIR__ . '/header.php';
   <div class="card">
     <div class="card-title">Edit Profile</div>
     <form method="POST">
+      <?= csrfField() ?>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
         <div class="form-group">
           <label>Full Name *</label>

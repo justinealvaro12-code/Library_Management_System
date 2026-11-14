@@ -220,6 +220,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   <?php if (!$success): ?>
   <form method="POST">
+    <?= csrfField() ?>
     <div class="form-row">
       <div class="form-group">
         <label>Student ID <span class="req">*</span></label>

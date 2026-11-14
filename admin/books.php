@@ -174,6 +174,7 @@ require_once '../includes/header.php';
 <div class="card" style="margin-bottom:24px;">
   <div class="card-title"><?= $action === 'edit' ? 'Edit Book' : 'Add New Book' ?></div>
   <form method="POST">
+    <?= csrfField() ?>
     <input type="hidden" name="action" value="<?= $action === 'edit' ? 'update' : 'add' ?>">
     <?php if ($action === 'edit' && !empty($editBook['id'])): ?><input type="hidden" name="id" value="<?= (int)$editBook['id'] ?>"><?php endif; ?>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
@@ -255,6 +256,7 @@ require_once '../includes/header.php';
           <td>
             <a href="?action=edit&id=<?= $book['id'] ?>" class="btn btn-sm btn-outline">Edit</a>
             <form method="POST" style="display:inline" onsubmit="return confirm('Delete this book?')">
+              <?= csrfField() ?>
               <input type="hidden" name="action" value="delete">
               <input type="hidden" name="id" value="<?= $book['id'] ?>">
               <button type="submit" class="btn btn-sm btn-danger">Del</button>
