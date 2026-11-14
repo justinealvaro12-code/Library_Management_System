@@ -80,7 +80,7 @@ require_once '../includes/header.php';
       <?php endif; ?>
     </div>
     <?php if ($b['available_copies'] == 0): ?>
-      <p style="font-size:12px;color:#e74c3c;margin-top:8px">Ask a librarian to reserve when available.</p>
+      <p style="font-size:12px;color:#e74c3c;margin-top:8px">Ask a librarian for assistance.</p>
     <?php endif; ?>
   </div>
 <?php endwhile; ?>

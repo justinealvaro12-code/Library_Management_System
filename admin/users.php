@@ -294,7 +294,7 @@ require_once '../includes/header.php';
               <button type="submit" class="btn btn-sm btn-outline"><?= $u['status']==='active'?'Disable':'Enable' ?></button>
             </form>
             <?php endif; ?>
-            <form method="POST" style="display:inline" onsubmit="return confirm('Reset the password for <?= htmlspecialchars(addslashes($u['full_name'])) ?>?')">
+            <form method="POST" style="display:inline" onsubmit="return confirm(<?= htmlspecialchars(json_encode('Reset the password for ' . $u['full_name'] . '?'), ENT_QUOTES) ?>)">
               <?= csrfField() ?>
               <input type="hidden" name="action" value="reset_password">
               <input type="hidden" name="id" value="<?= $u['id'] ?>">

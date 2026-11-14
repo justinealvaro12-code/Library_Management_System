@@ -106,7 +106,7 @@ require_once '../includes/header.php';
             <?php endif; ?>
           </td>
           <td>
-            <form method="POST" onsubmit="return confirm('Process return for <?= htmlspecialchars(addslashes($r['full_name'])) ?>?')">
+            <form method="POST" onsubmit="return confirm(<?= htmlspecialchars(json_encode('Process return for ' . $r['full_name'] . '?'), ENT_QUOTES) ?>)">
               <?= csrfField() ?>
               <input type="hidden" name="borrow_id" value="<?= $r['id'] ?>">
               <button type="submit" class="btn btn-sm btn-primary">Process Return</button>

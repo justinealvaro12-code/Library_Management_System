@@ -6,7 +6,7 @@ $pageTitle  = 'Reports';
 $activePage = 'reports';
 
 // Stats for reports
-$totalBooks     = $conn->query("SELECT COUNT(*) c, SUM(total_copies) t FROM books")->fetch_assoc();
+$totalBooks     = $conn->query("SELECT COUNT(*) c, COALESCE(SUM(total_copies),0) t FROM books")->fetch_assoc();
 $borrowStats    = $conn->query("SELECT status, COUNT(*) c FROM borrow_records GROUP BY status")->fetch_all(MYSQLI_ASSOC);
 $topBooks       = $conn->query("SELECT b.id, b.title, b.author, COUNT(*) times FROM borrow_records br JOIN books b ON br.book_id=b.id GROUP BY b.id, b.title, b.author ORDER BY times DESC LIMIT 5");
 $topStudents    = $conn->query("SELECT u.id, u.full_name, u.student_id, COUNT(*) times FROM borrow_records br JOIN users u ON br.user_id=u.id GROUP BY u.id, u.full_name, u.student_id ORDER BY times DESC LIMIT 5");

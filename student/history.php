@@ -46,8 +46,10 @@ require_once '../includes/header.php';
       <thead><tr><th>Book</th><th>Issue Date</th><th>Due Date</th><th>Return Date</th><th>Fine</th><th>Status</th></tr></thead>
       <tbody>
       <?php while ($r = $history->fetch_assoc()):
+        // 'overdue' is computed at render time; the stored status stays 'borrowed'.
         $status = ($r['status'] === 'borrowed' && $r['due_date'] < date('Y-m-d')) ? 'overdue' : $r['status'];
         $sc = match($status){ 'returned'=>'badge-success','overdue'=>'badge-danger',default=>'badge-info'};
+        $fine = $r['status'] === 'borrowed' ? calculateFine($r['due_date']) : (float)$r['fine_amount'];
       ?>
         <tr>
           <td>
@@ -57,7 +59,7 @@ require_once '../includes/header.php';
           <td style="font-size:12px"><?= $r['issue_date'] ?></td>
           <td style="font-size:12px"><?= $r['due_date'] ?></td>
           <td style="font-size:12px;color:#888"><?= $r['return_date'] ?? '—' ?></td>
-          <td><?= $r['fine_amount'] > 0 ? '<span style="color:#e74c3c">₱'.number_format($r['fine_amount'],2).'</span>' : '<span style="color:#aaa">—</span>' ?></td>
+          <td><?= $fine > 0 ? '<span style="color:#e74c3c">₱'.number_format($fine,2).'</span>' : '<span style="color:#aaa">—</span>' ?></td>
           <td><span class="badge <?= $sc ?>"><?= ucfirst($status) ?></span></td>
         </tr>
       <?php endwhile; ?>

@@ -201,7 +201,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
     <div class="feature-item">
       <div class="feature-dot"></div>
-      <p>Borrow, reserve, and track books from your dashboard</p>
+      <p>Borrow and track books from your dashboard</p>
     </div>
     <div class="feature-item">
       <div class="feature-dot"></div>

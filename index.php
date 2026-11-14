@@ -205,16 +205,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     font-size: 13px;
     margin-bottom: 20px;
   }
-  .demo-creds {
-    margin-top: 30px;
-    padding: 16px;
-    background: white;
-    border-radius: 8px;
-    border: 1px solid #e8e0d0;
-  }
-  .demo-creds h4 { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #999; margin-bottom: 10px; }
-  .demo-row { display: flex; justify-content: space-between; font-size: 12px; color: #555; padding: 4px 0; }
-  .demo-row span:first-child { color: var(--navy); font-weight: 500; }
   @media (max-width: 900px) {
     .left-panel { display: none; }
     .right-panel { width: 100%; }
@@ -233,7 +223,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <div class="features">
     <div class="feature-item">
       <div class="feature-dot"></div>
-      <p>Search, borrow, and reserve books from the digital catalog</p>
+      <p>Search and borrow books from the digital catalog</p>
     </div>
     <div class="feature-item">
       <div class="feature-dot"></div>
@@ -283,11 +273,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     New student? <a href="<?= SITE_URL ?>/register.php" style="color:var(--navy);font-weight:600;text-decoration:none;">Create an account →</a>
   </div>
 
-  <div class="demo-creds">
-    <h4>Demo Accounts</h4>
-    <div class="demo-row"><span>Admin</span><span>admin@rmc.edu.ph / password</span></div>
-    <div class="demo-row"><span>Librarian</span><span>librarian@rmc.edu.ph / password</span></div>
-  </div>
 </div>
 
 </body>
