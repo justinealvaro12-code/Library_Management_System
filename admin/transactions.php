@@ -1,5 +1,6 @@
 <?php
 require_once '../includes/config.php';
+require_once '../includes/pagination.php';
 requireRole('admin');
 
 $pageTitle  = 'Transactions';
@@ -18,6 +19,10 @@ if ($filter === 'overdue') {
     $where = "WHERE br.status='returned'";
 }
 
+$countRes = $conn->query("SELECT COUNT(*) c FROM borrow_records br $where");
+$totalRecords = (int)($countRes ? $countRes->fetch_assoc()['c'] : 0);
+$pager = paginate($totalRecords, 20);
+
 $records = $conn->query("
     SELECT br.*, u.full_name, u.student_id, b.title, b.author
     FROM borrow_records br
@@ -25,7 +30,7 @@ $records = $conn->query("
     JOIN books b ON br.book_id = b.id
     $where
     ORDER BY br.created_at DESC
-    LIMIT 100
+    LIMIT {$pager['per_page']} OFFSET {$pager['offset']}
 ");
 
 require_once '../includes/header.php';
@@ -59,7 +64,9 @@ require_once '../includes/header.php';
         </tr>
       </thead>
       <tbody>
-      <?php while ($r = $records->fetch_assoc()):
+      <?php if ($totalRecords === 0): ?>
+        <tr><td colspan="8" style="text-align:center;color:#888;padding:24px">No results found.</td></tr>
+      <?php else: while ($r = $records->fetch_assoc()):
         $isOverdue = $r['status'] === 'borrowed' && $r['due_date'] < date('Y-m-d');
         $fine = $isOverdue ? calculateFine($r['due_date']) : $r['fine_amount'];
         $status = $isOverdue ? 'overdue' : $r['status'];
@@ -91,10 +98,11 @@ require_once '../includes/header.php';
           </td>
           <td><span class="badge <?= $statusClass ?>"><?= ucfirst($status) ?></span></td>
         </tr>
-      <?php endwhile; ?>
+      <?php endwhile; endif; ?>
       </tbody>
     </table>
   </div>
+  <?= renderPagination($pager) ?>
 </div>
 
 <?php require_once '../includes/footer.php'; ?>

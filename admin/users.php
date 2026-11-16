@@ -1,5 +1,6 @@
 <?php
 require_once '../includes/config.php';
+require_once '../includes/pagination.php';
 requireRole('admin');
 
 $pageTitle     = 'Manage Users';
@@ -171,11 +172,21 @@ $role_filter = trim($_GET['role'] ?? '');
 if (!in_array($role_filter, $allowedRoles, true)) {
     $role_filter = '';
 }
+$where = '';
+$types = '';
+$params = [];
 if ($role_filter !== '') {
-    $users = dbSelect($conn, "SELECT * FROM users WHERE role = ? ORDER BY role, full_name", 's', [$role_filter]);
-} else {
-    $users = $conn->query("SELECT * FROM users ORDER BY role, full_name");
+    $where = "WHERE role = ?";
+    $types = 's';
+    $params = [$role_filter];
 }
+$countRes = dbSelect($conn, "SELECT COUNT(*) c FROM users $where", $types, $params);
+$totalUsers = (int)($countRes ? $countRes->fetch_assoc()['c'] : 0);
+$pager = paginate($totalUsers, 20);
+$sql = "SELECT * FROM users $where ORDER BY role, full_name LIMIT ? OFFSET ?";
+$typesP = $types . 'ii';
+$paramsP = array_merge($params, [$pager['per_page'], $pager['offset']]);
+$users = dbSelect($conn, $sql, $typesP, $paramsP);
 
 if ($msg === '' && isset($_GET['msg'])) {
     $map = ['added' => 'User added.', 'deleted' => 'User deleted.', 'updated' => 'Status updated.'];
@@ -205,7 +216,7 @@ require_once '../includes/header.php';
   </div>
 <?php endif; ?>
 
-<div style="display:flex;justify-content:space-between;margin-bottom:20px;gap:12px;">
+<div style="display:flex;justify-content:space-between;margin-bottom:20px;gap:12px;flex-wrap:wrap;">
   <div style="display:flex;gap:10px">
     <a href="users.php" class="btn btn-outline <?= !$role_filter?'btn-primary':'' ?>">All</a>
     <a href="?role=student" class="btn btn-outline <?= $role_filter==='student'?'btn-primary':'' ?>">Students</a>
@@ -264,7 +275,9 @@ require_once '../includes/header.php';
     <table>
       <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Student ID</th><th>Status</th><th>Joined</th><th>Actions</th></tr></thead>
       <tbody>
-      <?php while ($u = $users->fetch_assoc()): ?>
+      <?php if ($totalUsers === 0): ?>
+        <tr><td colspan="7" style="text-align:center;color:#888;padding:24px">No results found.</td></tr>
+      <?php else: while ($u = $users->fetch_assoc()): ?>
         <tr>
           <td>
             <div style="width:30px;height:30px;border-radius:50%;background:<?= ['admin'=>'#e74c3c','librarian'=>'#2980b9','student'=>'#27ae60'][$u['role']] ?>;display:inline-flex;align-items:center;justify-content:center;color:white;font-size:12px;font-weight:600;margin-right:8px;vertical-align:middle">
@@ -310,10 +323,11 @@ require_once '../includes/header.php';
             <?php endif; ?>
           </td>
         </tr>
-      <?php endwhile; ?>
+      <?php endwhile; endif; ?>
       </tbody>
     </table>
   </div>
+  <?= renderPagination($pager) ?>
 </div>
 
 <?php require_once '../includes/footer.php'; ?>

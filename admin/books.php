@@ -1,5 +1,6 @@
 <?php
 require_once '../includes/config.php';
+require_once '../includes/pagination.php';
 requireRole('admin');
 
 $pageTitle  = 'Manage Books';
@@ -151,17 +152,22 @@ if ($action === 'edit' && $editBook === null && isset($_GET['id'])) {
 }
 
 $searchRaw = trim($_GET['q'] ?? '');
+$where = '';
+$types = '';
+$params = [];
 if ($searchRaw !== '') {
     $like  = '%' . $searchRaw . '%';
-    $books = dbSelect(
-        $conn,
-        "SELECT * FROM books WHERE title LIKE ? OR author LIKE ? OR isbn LIKE ? ORDER BY title ASC",
-        'sss',
-        [$like, $like, $like]
-    );
-} else {
-    $books = $conn->query("SELECT * FROM books ORDER BY title ASC");
+    $where = "WHERE title LIKE ? OR author LIKE ? OR isbn LIKE ?";
+    $types = 'sss';
+    $params = [$like, $like, $like];
 }
+$countRes = dbSelect($conn, "SELECT COUNT(*) c FROM books $where", $types, $params);
+$totalBooks = (int)($countRes ? $countRes->fetch_assoc()['c'] : 0);
+$pager = paginate($totalBooks, 20);
+$sql = "SELECT * FROM books $where ORDER BY title ASC LIMIT ? OFFSET ?";
+$typesP = $types . 'ii';
+$paramsP = array_merge($params, [$pager['per_page'], $pager['offset']]);
+$books = dbSelect($conn, $sql, $typesP, $paramsP);
 
 if ($msg === '' && isset($_GET['msg'])) {
     $map = ['added' => 'Book added.', 'deleted' => 'Book deleted.', 'updated' => 'Book updated.'];
@@ -188,7 +194,7 @@ require_once '../includes/header.php';
   <div class="alert alert-<?= $msgType === 'danger' ? 'danger' : 'success' ?>"><?= $msgType === 'danger' ? '⚠️' : '✅' ?> <?= htmlspecialchars($msg) ?></div>
 <?php endif; ?>
 
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;gap:12px;">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;gap:12px;flex-wrap:wrap;">
   <form method="GET" style="display:flex;gap:10px;flex:1">
     <input type="text" name="q" class="form-control" placeholder="Search by title, author, or ISBN…" value="<?= htmlspecialchars($searchRaw) ?>" style="max-width:380px">
     <button type="submit" class="btn btn-outline">Search</button>
@@ -264,7 +270,9 @@ require_once '../includes/header.php';
     <table>
       <thead><tr><th>Title / Author</th><th>ISBN</th><th>Category</th><th>Copies</th><th>Available</th><th>Location</th><th>Actions</th></tr></thead>
       <tbody>
-      <?php while ($book = $books->fetch_assoc()): ?>
+      <?php if ($totalBooks === 0): ?>
+        <tr><td colspan="7" style="text-align:center;color:#888;padding:24px">No results found.</td></tr>
+      <?php else: while ($book = $books->fetch_assoc()): ?>
         <tr>
           <td>
             <strong><?= htmlspecialchars($book['title']) ?></strong><br>
@@ -289,10 +297,11 @@ require_once '../includes/header.php';
             </form>
           </td>
         </tr>
-      <?php endwhile; ?>
+      <?php endwhile; endif; ?>
       </tbody>
     </table>
   </div>
+  <?= renderPagination($pager) ?>
 </div>
 
 <?php require_once '../includes/footer.php'; ?>

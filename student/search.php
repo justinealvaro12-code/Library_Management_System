@@ -1,5 +1,6 @@
 <?php
 require_once '../includes/config.php';
+require_once '../includes/pagination.php';
 requireRole('student');
 
 $pageTitle  = 'Search Books';
@@ -22,7 +23,13 @@ if ($categoryRaw !== '') {
     $params[] = $categoryRaw;
 }
 
-$books      = dbSelect($conn, "SELECT * FROM books $where ORDER BY title ASC", $types, $params);
+$countRes = dbSelect($conn, "SELECT COUNT(*) c FROM books $where", $types, $params);
+$totalBooks = (int)($countRes ? $countRes->fetch_assoc()['c'] : 0);
+$pager = paginate($totalBooks, 12);
+
+$typesP  = $types . 'ii';
+$paramsP = array_merge($params, [$pager['per_page'], $pager['offset']]);
+$books   = dbSelect($conn, "SELECT * FROM books $where ORDER BY title ASC LIMIT ? OFFSET ?", $typesP, $paramsP);
 $categories = $conn->query("SELECT DISTINCT category FROM books ORDER BY category");
 
 require_once '../includes/header.php';
@@ -57,6 +64,11 @@ require_once '../includes/header.php';
   </form>
 </div>
 
+<?php if ($totalBooks === 0): ?>
+  <div class="card" style="text-align:center;padding:40px;color:#888">
+    <p>No results found<?= ($searchRaw !== '' || $categoryRaw !== '') ? ' for your search' : '' ?>.</p>
+  </div>
+<?php else: ?>
 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">
 <?php while ($b = $books->fetch_assoc()):
   $bookYear = (int)($b['year_published'] ?? 0);
@@ -66,14 +78,14 @@ require_once '../includes/header.php';
     <h3 style="font-size:16px;font-weight:600;color:#0f1e38;margin-bottom:4px;line-height:1.3"><?= htmlspecialchars($b['title']) ?></h3>
     <p style="font-size:13px;color:#666;margin-bottom:12px">by <?= htmlspecialchars($b['author']) ?></p>
     <?php if (!empty($b['publisher'])): ?>
-      <p style="font-size:12px;color:#aaa;margin-bottom:4px">📖 <?= htmlspecialchars($b['publisher'] ?? '') ?> <?= $bookYear > 0 ? '(' . $bookYear . ')' : '' ?></p>
+      <p style="font-size:12px;color:#aaa;margin-bottom:4px">📚 <?= htmlspecialchars($b['publisher'] ?? '') ?> <?= $bookYear > 0 ? '(' . $bookYear . ')' : '' ?></p>
     <?php endif; ?>
     <?php if (!empty($b['location'])): ?>
       <p style="font-size:12px;color:#aaa;margin-bottom:8px">📍 <?= htmlspecialchars($b['location'] ?? '') ?></p>
     <?php endif; ?>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid #f0f0f0">
       <span class="badge <?= $b['available_copies']>0?'badge-success':'badge-danger' ?>">
-        <?= $b['available_copies'] > 0 ? "✅ {$b['available_copies']} Available" : "❌ Unavailable" ?>
+        <?= $b['available_copies'] > 0 ? "✅ {$b['available_copies']} Available" : "⛔ Unavailable" ?>
       </span>
       <?php if (!empty($b['isbn'])): ?>
         <span style="font-size:11px;color:#ccc">ISBN: <?= htmlspecialchars($b['isbn'] ?? '') ?></span>
@@ -85,5 +97,9 @@ require_once '../includes/header.php';
   </div>
 <?php endwhile; ?>
 </div>
+<div class="card" style="margin-top:16px">
+  <?= renderPagination($pager) ?>
+</div>
+<?php endif; ?>
 
 <?php require_once '../includes/footer.php'; ?>
