@@ -95,6 +95,7 @@ CREATE TABLE IF NOT EXISTS activity_logs (
 -- YEAR cannot store years before 1901, so widen the column.
 ALTER TABLE books MODIFY COLUMN year_published SMALLINT UNSIGNED NULL;
 ALTER TABLE books ADD COLUMN IF NOT EXISTS status ENUM('available', 'unavailable') DEFAULT 'available';
+ALTER TABLE books ADD COLUMN IF NOT EXISTS cover_image VARCHAR(255) AFTER description;
 ALTER TABLE borrow_records ADD COLUMN IF NOT EXISTS fine_paid ENUM('yes', 'no') DEFAULT 'no';
 
 -- ============================================

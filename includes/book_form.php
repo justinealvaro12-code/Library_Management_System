@@ -1,10 +1,11 @@
 <?php
 if (!defined('SITE_URL')) { http_response_code(403); exit('Forbidden'); }
+require_once __DIR__ . '/book_cover.php';
 ?>
 <?php if ($action === 'add' || $action === 'edit'): ?>
 <div class="card" style="margin-bottom:24px;">
   <div class="card-title"><?= $action === 'edit' ? 'Edit Book' : 'Add New Book' ?></div>
-  <form method="POST">
+  <form method="POST" enctype="multipart/form-data">
     <?= csrfField() ?>
     <input type="hidden" name="action" value="<?= $action === 'edit' ? 'update' : 'add' ?>">
     <?php if ($action === 'edit' && !empty($editBook['id'])): ?><input type="hidden" name="id" value="<?= (int)$editBook['id'] ?>"><?php endif; ?>
@@ -54,6 +55,19 @@ if (!defined('SITE_URL')) { http_response_code(403); exit('Forbidden'); }
       <div class="form-group" style="grid-column:span 3">
         <label>Description</label>
         <textarea name="description" class="form-control" rows="2"><?= htmlspecialchars($editBook['description'] ?? '') ?></textarea>
+      </div>
+      <div class="form-group" style="grid-column:span 3">
+        <label>Cover Image</label>
+        <div class="cover-form-row">
+          <img src="<?= htmlspecialchars(bookCoverUrl($editBook['cover_image'] ?? '')) ?>" alt="Book cover preview" class="cover-preview">
+          <div style="flex:1;min-width:220px">
+            <input type="file" name="cover_image" class="form-control" accept="image/jpeg,image/png,image/webp">
+            <p class="form-hint">JPG, PNG, or WebP. Maximum 2 MB.</p>
+            <?php if (!empty($editBook['cover_image'])): ?>
+              <label class="checkbox-row"><input type="checkbox" name="remove_cover" value="1"> Remove current cover</label>
+            <?php endif; ?>
+          </div>
+        </div>
       </div>
     </div>
     <div style="display:flex;gap:10px">

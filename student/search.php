@@ -1,6 +1,7 @@
 <?php
 require_once '../includes/config.php';
 require_once '../includes/pagination.php';
+require_once '../includes/book_cover.php';
 requireRole('student');
 
 $pageTitle  = 'Search Books';
@@ -74,15 +75,20 @@ require_once '../includes/header.php';
   $bookYear = (int)($b['year_published'] ?? 0);
 ?>
   <div style="background:white;border-radius:12px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,0.06);border-top:3px solid <?= $b['available_copies']>0?'#27ae60':'#e74c3c' ?>">
-    <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#aaa;margin-bottom:8px"><?= htmlspecialchars($b['category'] ?? '') ?></div>
-    <h3 style="font-size:16px;font-weight:600;color:#0f1e38;margin-bottom:4px;line-height:1.3"><?= htmlspecialchars($b['title']) ?></h3>
-    <p style="font-size:13px;color:#666;margin-bottom:12px">by <?= htmlspecialchars($b['author']) ?></p>
-    <?php if (!empty($b['publisher'])): ?>
-      <p style="font-size:12px;color:#aaa;margin-bottom:4px">📚 <?= htmlspecialchars($b['publisher'] ?? '') ?> <?= $bookYear > 0 ? '(' . $bookYear . ')' : '' ?></p>
-    <?php endif; ?>
-    <?php if (!empty($b['location'])): ?>
-      <p style="font-size:12px;color:#aaa;margin-bottom:8px">📍 <?= htmlspecialchars($b['location'] ?? '') ?></p>
-    <?php endif; ?>
+    <div style="display:flex;gap:14px;align-items:flex-start">
+      <img src="<?= htmlspecialchars(bookCoverUrl($b['cover_image'] ?? '')) ?>" alt="" class="cover-thumb cover-thumb-search" loading="lazy">
+      <div style="min-width:0;flex:1">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#aaa;margin-bottom:8px"><?= htmlspecialchars($b['category'] ?? '') ?></div>
+        <h3 style="font-size:16px;font-weight:600;color:#0f1e38;margin-bottom:4px;line-height:1.3"><?= htmlspecialchars($b['title']) ?></h3>
+        <p style="font-size:13px;color:#666;margin-bottom:12px">by <?= htmlspecialchars($b['author']) ?></p>
+        <?php if (!empty($b['publisher'])): ?>
+          <p style="font-size:12px;color:#aaa;margin-bottom:4px">📚 <?= htmlspecialchars($b['publisher'] ?? '') ?> <?= $bookYear > 0 ? '(' . $bookYear . ')' : '' ?></p>
+        <?php endif; ?>
+        <?php if (!empty($b['location'])): ?>
+          <p style="font-size:12px;color:#aaa;margin-bottom:8px">📍 <?= htmlspecialchars($b['location'] ?? '') ?></p>
+        <?php endif; ?>
+      </div>
+    </div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid #f0f0f0">
       <span class="badge <?= $b['available_copies']>0?'badge-success':'badge-danger' ?>">
         <?= $b['available_copies'] > 0 ? "✅ {$b['available_copies']} Available" : "⛔ Unavailable" ?>

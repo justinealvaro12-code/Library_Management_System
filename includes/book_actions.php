@@ -1,6 +1,8 @@
 <?php
 if (!defined('SITE_URL')) { http_response_code(403); exit('Forbidden'); }
 
+require_once __DIR__ . '/book_cover.php';
+
 /**
  * Handle add/update/delete POST actions for book management.
  * Returns the updated page state; successful writes redirect and exit.
@@ -49,14 +51,16 @@ function bookHandlePost($conn, $postAction, $action, $editBook, $msg, $msgType) 
         }
 
         $status = 'available';
+        $existingCover = '';
 
         if ($postAction === 'update') {
-            $currentBook = dbSelect($conn, "SELECT total_copies, available_copies FROM books WHERE id = ?", 'i', [$id])->fetch_assoc();
+            $currentBook = dbSelect($conn, "SELECT total_copies, available_copies, cover_image FROM books WHERE id = ?", 'i', [$id])->fetch_assoc();
             $borrowed    = (int)dbSelect($conn, "SELECT COUNT(*) c FROM borrow_records WHERE book_id = ? AND status = 'borrowed'", 'i', [$id])->fetch_assoc()['c'];
 
             if (!$currentBook) {
                 $errors[] = 'Book not found.';
             } else {
+                $existingCover = (string)($currentBook['cover_image'] ?? '');
                 $available = max(0, min($copies, (int)$currentBook['available_copies'] + ($copies - (int)$currentBook['total_copies'])));
                 if ($copies < $borrowed) {
                     $errors[] = "Total copies cannot be less than the $borrowed currently borrowed.";
@@ -64,6 +68,18 @@ function bookHandlePost($conn, $postAction, $action, $editBook, $msg, $msgType) 
             }
 
             $status = $available > 0 ? 'available' : 'unavailable';
+        }
+
+        $cover = [
+            'filename' => bookCoverFilename($existingCover) !== '' ? bookCoverFilename($existingCover) : null,
+            'old_to_delete' => null,
+            'error' => '',
+        ];
+        if (empty($errors)) {
+            $cover = bookCoverProcess('cover_image', $existingCover, isset($_POST['remove_cover']));
+            if ($cover['error'] !== '') {
+                $errors[] = $cover['error'];
+            }
         }
 
         $editBook = [
@@ -78,6 +94,7 @@ function bookHandlePost($conn, $postAction, $action, $editBook, $msg, $msgType) 
             'available_copies' => $available,
             'location'         => $locationRaw,
             'description'      => $descriptionRaw,
+            'cover_image'      => $existingCover,
         ];
 
         if (!empty($errors)) {
@@ -86,15 +103,16 @@ function bookHandlePost($conn, $postAction, $action, $editBook, $msg, $msgType) 
             $action  = $postAction === 'add' ? 'add' : 'edit';
         } else {
             $isbnSql = $isbn !== '' ? $isbn : null;
+            $coverFile = $cover['filename'] !== null ? $cover['filename'] : null;
 
             try {
                 if ($postAction === 'add') {
                     dbExecute(
                         $conn,
-                        "INSERT INTO books (isbn, title, author, publisher, category, year_published, total_copies, available_copies, location, description, status)
-                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                        'sssssiiisss',
-                        [$isbnSql, $title, $author, $publisher, $category, $year, $copies, $copies, $location, $desc, $status]
+                        "INSERT INTO books (isbn, title, author, publisher, category, year_published, total_copies, available_copies, location, description, cover_image, status)
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                        'sssssiiissss',
+                        [$isbnSql, $title, $author, $publisher, $category, $year, $copies, $copies, $location, $desc, $coverFile, $status]
                     );
                     logActivity($conn, $_SESSION['user_id'], 'add_book', "Added: $title");
                     header("Location: books.php?msg=added");
@@ -104,14 +122,20 @@ function bookHandlePost($conn, $postAction, $action, $editBook, $msg, $msgType) 
                 dbExecute(
                     $conn,
                     "UPDATE books SET isbn = ?, title = ?, author = ?, publisher = ?, category = ?, year_published = ?,
-                     total_copies = ?, available_copies = ?, location = ?, description = ?, status = ? WHERE id = ?",
-                    'sssssiiisssi',
-                    [$isbnSql, $title, $author, $publisher, $category, $year, $copies, $available, $location, $desc, $status, $id]
+                     total_copies = ?, available_copies = ?, location = ?, description = ?, cover_image = ?, status = ? WHERE id = ?",
+                    'sssssiiissssi',
+                    [$isbnSql, $title, $author, $publisher, $category, $year, $copies, $available, $location, $desc, $coverFile, $status, $id]
                 );
+                if (!empty($cover['old_to_delete'])) {
+                    bookCoverDelete($cover['old_to_delete']);
+                }
                 logActivity($conn, $_SESSION['user_id'], 'update_book', "Updated: $title");
                 header("Location: books.php?msg=updated");
                 exit();
             } catch (mysqli_sql_exception $e) {
+                if (!empty($cover['filename']) && $cover['filename'] !== $existingCover) {
+                    bookCoverDelete($cover['filename']);
+                }
                 $msgType = 'danger';
                 $msg     = (int)$e->getCode() === 1062
                     ? 'A book with that ISBN already exists.'
@@ -120,6 +144,10 @@ function bookHandlePost($conn, $postAction, $action, $editBook, $msg, $msgType) 
             }
         }
     } elseif ($postAction === 'delete') {
+        if (($_SESSION['user_role'] ?? '') !== 'admin') {
+            return ['action' => $action, 'editBook' => $editBook, 'msg' => 'Only administrators can delete books.', 'msgType' => 'danger'];
+        }
+
         $id      = (int)($_POST['id'] ?? 0);
         $records = (int)dbSelect($conn, "SELECT COUNT(*) c FROM borrow_records WHERE book_id = ?", 'i', [$id])->fetch_assoc()['c'];
 
@@ -127,8 +155,12 @@ function bookHandlePost($conn, $postAction, $action, $editBook, $msg, $msgType) 
             $msgType = 'danger';
             $msg     = "Cannot delete this book: it has $records borrowing record(s) in the system. Consider marking it Unavailable instead.";
         } else {
+            $bookRow = dbSelect($conn, "SELECT cover_image FROM books WHERE id = ?", 'i', [$id])->fetch_assoc();
+            $coverToDelete = (string)($bookRow['cover_image'] ?? '');
+
             try {
                 dbExecute($conn, "DELETE FROM books WHERE id = ?", 'i', [$id]);
+                bookCoverDelete($coverToDelete);
                 logActivity($conn, $_SESSION['user_id'], 'delete_book', "Deleted book #$id");
                 header("Location: books.php?msg=deleted");
                 exit();

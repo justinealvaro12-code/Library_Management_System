@@ -1,6 +1,7 @@
 <?php
 require_once '../includes/config.php';
 require_once '../includes/pagination.php';
+require_once '../includes/book_cover.php';
 require_once '../includes/book_actions.php';
 requireRole('admin');
 
@@ -86,12 +87,13 @@ require_once '../includes/header.php';
 <div class="card">
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Title / Author</th><th>ISBN</th><th>Category</th><th>Copies</th><th>Available</th><th>Location</th><th>Actions</th></tr></thead>
+      <thead><tr><th>Cover</th><th>Title / Author</th><th>ISBN</th><th>Category</th><th>Copies</th><th>Available</th><th>Location</th><th>Actions</th></tr></thead>
       <tbody>
       <?php if ($totalBooks === 0): ?>
-        <tr><td colspan="7" style="text-align:center;color:#888;padding:24px">No results found.</td></tr>
+        <tr><td colspan="8" style="text-align:center;color:#888;padding:24px">No results found.</td></tr>
       <?php else: while ($book = $books->fetch_assoc()): ?>
         <tr>
+          <td><img src="<?= htmlspecialchars(bookCoverUrl($book['cover_image'] ?? '')) ?>" alt="" class="cover-thumb cover-thumb-admin" loading="lazy"></td>
           <td>
             <strong><?= htmlspecialchars($book['title']) ?></strong><br>
             <span style="font-size:12px;color:#888"><?= htmlspecialchars($book['author']) ?></span>

@@ -1,5 +1,6 @@
 <?php
 require_once '../includes/config.php';
+require_once '../includes/book_cover.php';
 requireRole('student');
 
 $pageTitle  = 'My Borrowed Books';
@@ -7,7 +8,7 @@ $activePage = 'borrowed';
 $uid = (int)$_SESSION['user_id'];
 
 $borrowed = dbSelect($conn, "
-    SELECT br.*, b.title, b.author, b.isbn, b.category
+    SELECT br.*, b.title, b.author, b.isbn, b.category, b.cover_image
     FROM borrow_records br JOIN books b ON br.book_id=b.id
     WHERE br.user_id = ? AND br.status = 'borrowed'
     ORDER BY br.due_date ASC
@@ -40,8 +41,13 @@ require_once '../includes/header.php';
       ?>
         <tr>
           <td>
-            <strong><?= htmlspecialchars($r['title']) ?></strong><br>
-            <span style="font-size:12px;color:#888">by <?= htmlspecialchars($r['author']) ?></span>
+            <div class="book-cell">
+              <img src="<?= htmlspecialchars(bookCoverUrl($r['cover_image'] ?? '')) ?>" alt="" class="cover-thumb cover-thumb-borrowed" loading="lazy">
+              <div>
+                <strong><?= htmlspecialchars($r['title']) ?></strong><br>
+                <span style="font-size:12px;color:#888">by <?= htmlspecialchars($r['author']) ?></span>
+              </div>
+            </div>
           </td>
           <td><span class="badge badge-info"><?= htmlspecialchars($r['category']) ?></span></td>
           <td style="font-size:12px"><?= $r['issue_date'] ?></td>
