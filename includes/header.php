@@ -313,6 +313,20 @@ $roleColor  = $roleColors[$role] ?? '#555';
     box-shadow: 0 2px 8px rgba(0,0,0,0.2);
   }
 
+  /* REPORTS */
+  .report-filter { display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; }
+  .report-filter .form-group { margin: 0; min-width: 170px; }
+  .report-filter-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .report-range { font-size: 12px; color: #888; margin-top: 10px; }
+  .report-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin-bottom: 24px; }
+  .chart-card .card-title { margin-bottom: 4px; }
+  .chart-wrap { position: relative; height: 260px; margin-top: 16px; }
+  .report-empty { color: #888; font-size: 14px; padding: 18px 0; }
+
+  @media (max-width: 900px) {
+    .report-grid { grid-template-columns: 1fr; }
+  }
+
   @media (max-width: 768px) {
     .sidebar { transform: translateX(-100%); }
     body.menu-open .sidebar { transform: translateX(0); }

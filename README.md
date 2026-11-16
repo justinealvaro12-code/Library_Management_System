@@ -53,3 +53,13 @@ Student IDs must be **4 to 20 characters** and may only contain **letters, numbe
 - Invalid examples: `123` (too short), `2026 0001` (space), `2026_0001` (underscore)
 
 Student IDs must also be unique.
+
+## Vendored Chart.js
+
+Reports use a local copy of Chart.js so charts work offline on XAMPP.
+
+- Version: **4.4.7** (official `chart.js` npm package, downloaded from jsDelivr)
+- File: `assets/js/chart.umd.min.js`
+- SHA-256: `206b6e8bb00fc7bba2c7ee80ca41db3e9e05ba7be0aa35abeba9cfd5357f5d0e`
+- License: `assets/js/chart.LICENSE.md` (MIT)
+- The bundle includes the Chart.js UMD build and exposes `window.Chart`; no CDN is loaded at runtime.
