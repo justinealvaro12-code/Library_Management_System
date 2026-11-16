@@ -122,7 +122,8 @@ INSERT IGNORE INTO settings (setting_key, setting_value) VALUES
 ('loan_period_days', '7'),
 ('fine_per_day', '20.00'),
 ('max_books_per_student', '3'),
-('reservation_expiry_days', '2');
+('reservation_expiry_days', '2'),
+('block_unpaid_fines', '0');
 
 
 -- ============================================

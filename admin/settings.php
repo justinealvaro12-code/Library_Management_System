@@ -11,6 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $loan_period  = (int)($_POST['loan_period_days'] ?? 0);
     $fine_per_day = (float)($_POST['fine_per_day'] ?? 0);
     $max_books    = (int)($_POST['max_books_per_student'] ?? 0);
+    $block_unpaid_fines = isset($_POST['block_unpaid_fines']) && $_POST['block_unpaid_fines'] === '1' ? '1' : '0';
 
     if ($library_name === '') {
         $errors[] = 'Library name is required.';
@@ -31,6 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'loan_period_days'         => (string)$loan_period,
             'fine_per_day'             => number_format($fine_per_day, 2, '.', ''),
             'max_books_per_student'    => (string)$max_books,
+            'block_unpaid_fines'       => $block_unpaid_fines,
         ];
 
         foreach ($values as $key => $value) {
@@ -53,6 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'loan_period_days'        => $_POST['loan_period_days'] ?? '',
         'fine_per_day'            => $_POST['fine_per_day'] ?? '',
         'max_books_per_student'   => $_POST['max_books_per_student'] ?? '',
+        'block_unpaid_fines'      => $block_unpaid_fines,
     ];
 } else {
     $settings = [];
@@ -97,6 +100,13 @@ require_once '../includes/header.php';
     <div class="form-group">
       <label>Max Books Per Student</label>
       <input type="number" name="max_books_per_student" class="form-control" min="1" value="<?= htmlspecialchars($settings['max_books_per_student'] ?? 3) ?>">
+    </div>
+    <div class="form-group">
+      <label style="display:flex;align-items:center;gap:8px;font-weight:500">
+        <input type="checkbox" name="block_unpaid_fines" value="1" <?= (($settings['block_unpaid_fines'] ?? '0') === '1') ? 'checked' : '' ?>>
+        Block borrowing when student has unpaid fines
+      </label>
+      <small style="color:#888;font-size:12px">When enabled, students with unpaid fines (returned records with fine &gt; 0 and not marked paid) cannot borrow new books.</small>
     </div>
     <button type="submit" class="btn btn-primary">Save Settings</button>
   </form>

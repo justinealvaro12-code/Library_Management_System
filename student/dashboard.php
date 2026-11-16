@@ -9,6 +9,7 @@ $uid = (int)$_SESSION['user_id'];
 $activeBorrows  = (int)dbSelect($conn, "SELECT COUNT(*) c FROM borrow_records WHERE user_id = ? AND status = 'borrowed'", 'i', [$uid])->fetch_assoc()['c'];
 $totalBorrowed  = (int)dbSelect($conn, "SELECT COUNT(*) c FROM borrow_records WHERE user_id = ?", 'i', [$uid])->fetch_assoc()['c'];
 $overdueCount   = (int)dbSelect($conn, "SELECT COUNT(*) c FROM borrow_records WHERE user_id = ? AND status = 'borrowed' AND due_date < CURDATE()", 'i', [$uid])->fetch_assoc()['c'];
+$unpaidBalance  = (float)dbSelect($conn, "SELECT COALESCE(SUM(fine_amount),0) s FROM borrow_records WHERE user_id = ? AND status = 'returned' AND fine_amount > 0 AND fine_paid = 'no'", 'i', [$uid])->fetch_assoc()['s'];
 $maxBooks       = MAX_BORROW;
 
 $currentBooks = dbSelect($conn, "
@@ -16,6 +17,14 @@ $currentBooks = dbSelect($conn, "
     FROM borrow_records br JOIN books b ON br.book_id=b.id
     WHERE br.user_id = ? AND br.status = 'borrowed'
     ORDER BY br.due_date ASC
+", 'i', [$uid]);
+
+$recentReturns = dbSelect($conn, "
+    SELECT br.*, b.title, b.author
+    FROM borrow_records br JOIN books b ON br.book_id=b.id
+    WHERE br.user_id = ? AND br.status = 'returned'
+    ORDER BY br.return_date DESC, br.created_at DESC
+    LIMIT 5
 ", 'i', [$uid]);
 
 require_once '../includes/header.php';
@@ -42,11 +51,22 @@ require_once '../includes/header.php';
     <div class="stat-value"><?= $overdueCount ?></div>
     <div class="stat-label">Overdue Books</div>
   </div>
+  <div class="stat-card" style="--accent:#e67e22">
+    <div class="stat-icon">💸</div>
+    <div class="stat-value">₱<?= number_format($unpaidBalance, 2) ?></div>
+    <div class="stat-label">Unpaid Fine Balance</div>
+  </div>
 </div>
 
 <?php if ($overdueCount > 0): ?>
 <div class="alert alert-danger">
   ⚠️ You have <strong><?= $overdueCount ?></strong> overdue book(s). Please return them to the library as soon as possible to avoid additional fines.
+</div>
+<?php endif; ?>
+
+<?php if ($unpaidBalance > 0): ?>
+<div class="alert alert-danger">
+  💸 You have an outstanding unpaid fine balance of <strong>₱<?= number_format($unpaidBalance, 2) ?></strong>. Please settle it at the library.
 </div>
 <?php endif; ?>
 
@@ -95,6 +115,39 @@ require_once '../includes/header.php';
   </div>
   <?php endif; ?>
 </div>
+
+<?php if ($recentReturns->num_rows > 0): ?>
+<div class="card" style="margin-top:20px">
+  <div class="card-title">Recent Returns</div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Book</th><th>Return Date</th><th>Fine</th><th>Payment</th></tr></thead>
+      <tbody>
+      <?php while ($r = $recentReturns->fetch_assoc()):
+        $fine = (float)$r['fine_amount'];
+        $isUnpaid = $fine > 0 && ($r['fine_paid'] ?? 'no') === 'no';
+        $isPaid = $fine > 0 && ($r['fine_paid'] ?? 'no') === 'yes';
+      ?>
+        <tr>
+          <td><strong><?= htmlspecialchars($r['title']) ?></strong><br><span style="font-size:12px;color:#888"><?= htmlspecialchars($r['author']) ?></span></td>
+          <td style="font-size:12px"><?= $r['return_date'] ?? '—' ?></td>
+          <td><?= $fine > 0 ? '<span style="color:#e74c3c">₱'.number_format($fine,2).'</span>' : '<span style="color:#aaa">—</span>' ?></td>
+          <td>
+            <?php if ($isPaid): ?>
+              <span class="badge badge-success">Paid</span>
+            <?php elseif ($isUnpaid): ?>
+              <span class="badge badge-danger">Unpaid</span>
+            <?php else: ?>
+              <span style="color:#aaa">—</span>
+            <?php endif; ?>
+          </td>
+        </tr>
+      <?php endwhile; ?>
+      </tbody>
+    </table>
+  </div>
+</div>
+<?php endif; ?>
 
 <div style="margin-top:16px">
   <a href="<?= SITE_URL ?>/student/search.php" class="btn btn-gold">🔍 Search Books</a>

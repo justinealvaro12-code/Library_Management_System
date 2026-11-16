@@ -14,7 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $lib_id  = $_SESSION['user_id'];
     $issue   = date('Y-m-d');
 
-    $student = dbSelect($conn, "SELECT id FROM users WHERE id = ? AND status = 'active' AND role = 'student'", 'i', [$user_id])->fetch_assoc();
+    $student = dbSelect($conn, "SELECT id, full_name FROM users WHERE id = ? AND status = 'active' AND role = 'student'", 'i', [$user_id])->fetch_assoc();
     $book    = $book_id > 0 ? dbSelect($conn, "SELECT * FROM books WHERE id = ?", 'i', [$book_id])->fetch_assoc() : null;
 
     if (!$student) {
@@ -24,6 +24,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($days < 1 || $days > 60) {
         $msg = 'error:Loan period must be between 1 and 60 days.';
     } else {
+        $blockUnpaid = ($settings['block_unpaid_fines'] ?? '0') === '1';
+        if ($blockUnpaid) {
+            $unpaidRow = dbSelect($conn, "SELECT COALESCE(SUM(fine_amount),0) total FROM borrow_records WHERE user_id = ? AND status = 'returned' AND fine_amount > 0 AND fine_paid = 'no'", 'i', [$user_id])->fetch_assoc();
+            $unpaidTotal = (float)($unpaidRow['total'] ?? 0);
+            if ($unpaidTotal > 0) {
+                $msg = 'error:Cannot issue book: student has unpaid fines totaling ₱' . number_format($unpaidTotal, 2) . '.';
+            }
+        }
+    }
+
+    if ($msg === '') {
         $alreadyBorrowed = (int)dbSelect($conn, "SELECT COUNT(*) c FROM borrow_records WHERE user_id = ? AND book_id = ? AND status = 'borrowed'", 'ii', [$user_id, $book_id])->fetch_assoc()['c'];
         $current         = (int)dbSelect($conn, "SELECT COUNT(*) c FROM borrow_records WHERE user_id = ? AND status = 'borrowed'", 'i', [$user_id])->fetch_assoc()['c'];
 

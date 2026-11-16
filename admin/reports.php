@@ -12,6 +12,7 @@ $topBooks       = $conn->query("SELECT b.id, b.title, b.author, COUNT(*) times F
 $topStudents    = $conn->query("SELECT u.id, u.full_name, u.student_id, COUNT(*) times FROM borrow_records br JOIN users u ON br.user_id=u.id GROUP BY u.id, u.full_name, u.student_id ORDER BY times DESC LIMIT 5");
 $overdueList    = $conn->query("SELECT br.*, u.full_name, u.student_id, b.title FROM borrow_records br JOIN users u ON br.user_id=u.id JOIN books b ON br.book_id=b.id WHERE br.status='borrowed' AND br.due_date < CURDATE() ORDER BY br.due_date ASC");
 $monthly        = $conn->query("SELECT DATE_FORMAT(issue_date,'%Y-%m') ym, COUNT(*) c FROM borrow_records GROUP BY ym ORDER BY ym DESC LIMIT 6");
+$fineStats      = $conn->query("SELECT COALESCE(SUM(CASE WHEN status='returned' AND fine_amount > 0 AND fine_paid = 'no' THEN fine_amount ELSE 0 END),0) uncollected, COALESCE(SUM(CASE WHEN status='returned' AND fine_amount > 0 AND fine_paid = 'yes' THEN fine_amount ELSE 0 END),0) collected FROM borrow_records")->fetch_assoc();
 
 $borrowMap = [];
 foreach ($borrowStats as $s) $borrowMap[$s['status']] = $s['c'];
@@ -44,6 +45,16 @@ require_once '../includes/header.php';
     <div class="stat-icon">⏰</div>
     <div class="stat-value"><?= $conn->query("SELECT COUNT(*) c FROM borrow_records WHERE status='borrowed' AND due_date < CURDATE()")->fetch_assoc()['c'] ?></div>
     <div class="stat-label">Currently Overdue</div>
+  </div>
+  <div class="stat-card" style="--accent:#e67e22">
+    <div class="stat-icon">₱</div>
+    <div class="stat-value">₱<?= number_format((float)($fineStats['uncollected'] ?? 0), 2) ?></div>
+    <div class="stat-label">Uncollected Fines</div>
+  </div>
+  <div class="stat-card" style="--accent:#16a085">
+    <div class="stat-icon">₱</div>
+    <div class="stat-value">₱<?= number_format((float)($fineStats['collected'] ?? 0), 2) ?></div>
+    <div class="stat-label">Collected Fines</div>
   </div>
 </div>
 
