@@ -20,9 +20,12 @@ foreach ($borrowStats as $s) $borrowMap[$s['status']] = $s['c'];
 require_once '../includes/header.php';
 ?>
 
-<div class="page-header">
-  <h1>Reports</h1>
-  <p>Library analytics and summary reports.</p>
+<div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+  <div>
+    <h1>Reports</h1>
+    <p>Library analytics and summary reports.</p>
+  </div>
+  <div><a class="btn btn-outline" href="<?= SITE_URL ?>/admin/exports/reports.php">Export CSV</a></div>
 </div>
 
 <div class="stats-grid" style="margin-bottom:24px">

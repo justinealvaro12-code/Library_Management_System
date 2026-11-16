@@ -36,9 +36,12 @@ $records = $conn->query("
 require_once '../includes/header.php';
 ?>
 
-<div class="page-header">
-  <h1>Transactions</h1>
-  <p>View all borrowing and return records.</p>
+<div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+  <div>
+    <h1>Transactions</h1>
+    <p>View all borrowing and return records.</p>
+  </div>
+  <div><a class="btn btn-outline" href="<?= SITE_URL ?>/admin/exports/transactions.php?<?= http_build_query(array_intersect_key($_GET, array_flip(['filter']))) ?>">Export CSV</a></div>
 </div>
 
 <div style="display:flex;gap:10px;margin-bottom:20px">

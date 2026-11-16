@@ -223,7 +223,10 @@ require_once '../includes/header.php';
     <a href="?role=librarian" class="btn btn-outline <?= $role_filter==='librarian'?'btn-primary':'' ?>">Librarians</a>
     <a href="?role=admin" class="btn btn-outline <?= $role_filter==='admin'?'btn-primary':'' ?>">Admins</a>
   </div>
-  <a href="?action=add" class="btn btn-gold">+ Add User</a>
+  <div style="display:flex;gap:8px">
+    <a class="btn btn-outline" href="<?= SITE_URL ?>/admin/exports/users.php?<?= http_build_query(array_intersect_key($_GET, array_flip(['role']))) ?>">Export CSV</a>
+    <a href="?action=add" class="btn btn-gold">+ Add User</a>
+  </div>
 </div>
 
 <?php if ($action === 'add'): ?>

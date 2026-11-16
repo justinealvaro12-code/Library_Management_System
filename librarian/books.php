@@ -40,6 +40,7 @@ require_once '../includes/header.php';
     <button type="submit" class="btn btn-outline">Search</button>
     <?php if ($searchRaw !== ''): ?><a href="books.php" class="btn btn-outline">Clear</a><?php endif; ?>
   </form>
+  <a class="btn btn-outline" href="<?= SITE_URL ?>/librarian/exports/books.php?<?= http_build_query(array_intersect_key($_GET, array_flip(['q']))) ?>">Export CSV</a>
 </div>
 
 <div class="card">

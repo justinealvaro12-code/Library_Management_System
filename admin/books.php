@@ -199,7 +199,10 @@ require_once '../includes/header.php';
     <input type="text" name="q" class="form-control" placeholder="Search by title, author, or ISBN…" value="<?= htmlspecialchars($searchRaw) ?>" style="max-width:380px">
     <button type="submit" class="btn btn-outline">Search</button>
   </form>
-  <a href="?action=add" class="btn btn-gold">+ Add Book</a>
+  <div style="display:flex;gap:8px">
+    <a class="btn btn-outline" href="<?= SITE_URL ?>/admin/exports/books.php?<?= http_build_query(array_intersect_key($_GET, array_flip(['q']))) ?>">Export CSV</a>
+    <a href="?action=add" class="btn btn-gold">+ Add Book</a>
+  </div>
 </div>
 
 <?php if ($action === 'add' || $action === 'edit'): ?>
