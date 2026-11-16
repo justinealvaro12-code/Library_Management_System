@@ -62,4 +62,5 @@ Reports use a local copy of Chart.js so charts work offline on XAMPP.
 - File: `assets/js/chart.umd.min.js`
 - SHA-256: `206b6e8bb00fc7bba2c7ee80ca41db3e9e05ba7be0aa35abeba9cfd5357f5d0e`
 - License: `assets/js/chart.LICENSE.md` (MIT)
+- License SHA-256: `41a84aa2caba645f966a18d9c2056b73e6d3a81d80bc0046bc0011a2634d4cce`
 - The bundle includes the Chart.js UMD build and exposes `window.Chart`; no CDN is loaded at runtime.
