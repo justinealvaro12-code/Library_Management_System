@@ -24,6 +24,16 @@ The script creates the `lms_rmc` database, tables, and default data. It is safe 
 
 If you already have an older `lms_rmc` database, run `migration_existing_database.sql` instead to add missing tables, columns, and default settings.
 
+## Reservations and overdue notices
+
+Students can reserve a title when no unheld copies are available. Reservations enter a first-come-first-served waiting queue. When a copy becomes available, the next waiting reservation is marked ready for pickup for the configured number of days. Librarians fulfill a ready reservation only from **Issue Book**; expired or cancelled holds release the copy to the next student.
+
+Expiry is lazy and runs from normal student, librarian, and administrator pages and circulation actions. A shared sweep timestamp in `settings.reservation_last_sweep` throttles the sweep to about once per minute. The database session timezone is set to `+08:00`, matching PHP's `Asia/Manila` timezone.
+
+Administrators can set **Reservation Pickup Window** from 1 to 30 days (default 2) and **Max Active Reservations Per Student** from 1 to 10 (default 3) in **Settings**. Overdue notices are computed from active loans and the current fine-per-day setting; no overdue status or accruing fine is stored on the loan row. Admin and librarian overdue pages provide a paginated queue and CSV export.
+
+For an existing installation, run `migration_existing_database.sql`. It upgrades the reservation status and expiry columns before adding the generated active flag and unique active-hold index, cleans duplicate active holds, and changes reservation foreign keys to restrict deletes. The migration is designed to be rerun safely; back up the database before applying schema migrations.
+
 ## Local Configuration
 
 The default settings in `includes/config.php` match a standard XAMPP installation (`root` user, empty password, database `lms_rmc`).

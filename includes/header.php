@@ -7,6 +7,20 @@ if (!defined('SITE_URL')) {
 $role = $_SESSION['user_role'] ?? '';
 $name = $_SESSION['user_name'] ?? '';
 
+$studentNotice = null;
+if ($role === 'student') {
+    $studentNotice = dbSelect($conn,
+        "SELECT
+            COALESCE(SUM(status = 'borrowed' AND due_date >= CURDATE() AND due_date <= DATE_ADD(CURDATE(), INTERVAL 2 DAY)), 0) AS due_soon,
+            COALESCE(SUM(status = 'borrowed' AND due_date < CURDATE()), 0) AS overdue_count,
+            COALESCE(SUM(CASE
+                WHEN status = 'returned' AND fine_amount > 0 AND fine_paid = 'no' THEN fine_amount
+                WHEN status = 'borrowed' AND due_date < CURDATE() THEN DATEDIFF(CURDATE(), due_date) * ?
+                ELSE 0 END), 0) AS estimated_unpaid_fines
+         FROM borrow_records WHERE user_id = ?",
+        'di', [FINE_PER_DAY, (int)$_SESSION['user_id']])->fetch_assoc();
+}
+
 $navItems = [];
 if ($role === 'admin') {
     $navItems = [
@@ -24,6 +38,7 @@ if ($role === 'admin') {
         ['url' => SITE_URL.'/librarian/books.php',         'icon' => '📚', 'label' => 'Books',         'key' => 'books'],
         ['url' => SITE_URL.'/librarian/issue_book.php',    'icon' => '➕', 'label' => 'Issue Book',    'key' => 'issue_book'],
         ['url' => SITE_URL.'/librarian/return_book.php',   'icon' => '↩️', 'label' => 'Return Book',   'key' => 'return_book'],
+        ['url' => SITE_URL.'/librarian/reservations.php',  'icon' => '📅', 'label' => 'Reservations',  'key' => 'reservations'],
         ['url' => SITE_URL.'/librarian/transactions.php',  'icon' => '📋', 'label' => 'Transactions',  'key' => 'transactions'],
         ['url' => SITE_URL.'/librarian/reports.php',       'icon' => '📊', 'label' => 'Reports',       'key' => 'reports'],
         ['url' => SITE_URL.'/librarian/profile.php',       'icon' => '👤', 'label' => 'My Profile',    'key' => 'profile'],
@@ -33,10 +48,17 @@ if ($role === 'admin') {
         ['url' => SITE_URL.'/student/dashboard.php',  'icon' => '🏠', 'label' => 'Dashboard', 'key' => 'dashboard'],
         ['url' => SITE_URL.'/student/search.php',     'icon' => '🔍', 'label' => 'Search Books', 'key' => 'search'],
         ['url' => SITE_URL.'/student/borrowed.php',   'icon' => '📖', 'label' => 'My Books',   'key' => 'borrowed'],
+        ['url' => SITE_URL.'/student/reservations.php', 'icon' => '📅', 'label' => 'My Reservations', 'key' => 'reservations'],
         ['url' => SITE_URL.'/student/history.php',    'icon' => '🕐', 'label' => 'History',    'key' => 'history'],
         ['url' => SITE_URL.'/student/profile.php',    'icon' => '👤', 'label' => 'My Profile',  'key' => 'profile'],
     ];
 }
+
+$navItems = match ($role) {
+    'admin' => array_merge(array_slice($navItems, 0, -1), [['url' => SITE_URL.'/librarian/reservations.php', 'icon' => '!', 'label' => 'Reservations', 'key' => 'reservations'], ['url' => SITE_URL.'/admin/overdue.php', 'icon' => '!', 'label' => 'Overdue', 'key' => 'overdue']], array_slice($navItems, -1)),
+    'librarian' => array_merge(array_slice($navItems, 0, -1), [['url' => SITE_URL.'/librarian/overdue.php', 'icon' => '!', 'label' => 'Overdue', 'key' => 'overdue']], array_slice($navItems, -1)),
+    default => $navItems,
+};
 
 $roleColors = ['admin' => '#e74c3c', 'librarian' => '#2980b9', 'student' => '#27ae60'];
 $roleColor  = $roleColors[$role] ?? '#555';
@@ -380,3 +402,10 @@ $roleColor  = $roleColors[$role] ?? '#555';
 
 <div class="content-wrap">
 <main class="main">
+<?php if ($studentNotice && ((int)$studentNotice['due_soon'] > 0 || (int)$studentNotice['overdue_count'] > 0 || (float)$studentNotice['estimated_unpaid_fines'] > 0)): ?>
+  <div class="alert <?= (int)$studentNotice['overdue_count'] > 0 ? 'alert-danger' : 'alert-success' ?>">
+    <?php if ((int)$studentNotice['due_soon'] > 0): ?><div><?= (int)$studentNotice['due_soon'] ?> loan(s) due within 2 days.</div><?php endif; ?>
+    <?php if ((int)$studentNotice['overdue_count'] > 0): ?><div><?= (int)$studentNotice['overdue_count'] ?> loan(s) overdue.</div><?php endif; ?>
+    <div>Estimated unpaid fines (includes fines still accruing): PHP <?= number_format((float)$studentNotice['estimated_unpaid_fines'], 2) ?></div>
+  </div>
+<?php endif; ?>
