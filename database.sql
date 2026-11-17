@@ -74,11 +74,18 @@ CREATE TABLE IF NOT EXISTS reservations (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     book_id INT NOT NULL,
-    reservation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    expiry_date DATE,
-    status ENUM('pending', 'approved', 'cancelled', 'expired') DEFAULT 'pending',
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
+    reservation_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expiry_date DATETIME DEFAULT NULL,
+    status ENUM('waiting', 'ready', 'fulfilled', 'cancelled', 'expired') NOT NULL DEFAULT 'waiting',
+    active_flag TINYINT GENERATED ALWAYS AS (CASE WHEN status IN ('waiting', 'ready') THEN 1 ELSE NULL END) STORED,
+    UNIQUE KEY uq_reservations_active (user_id, book_id, active_flag),
+    KEY user_id (user_id),
+    KEY book_id (book_id),
+    KEY idx_reservations_queue (book_id, status, reservation_date, id),
+    KEY idx_reservations_user (user_id, status, reservation_date, id),
+    KEY idx_reservations_expiry (status, expiry_date),
+    CONSTRAINT fk_reservations_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_reservations_book FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE RESTRICT
 );
 
 -- ============================================
@@ -123,6 +130,8 @@ INSERT IGNORE INTO settings (setting_key, setting_value) VALUES
 ('fine_per_day', '20.00'),
 ('max_books_per_student', '3'),
 ('reservation_expiry_days', '2'),
+('max_active_reservations', '3'),
+('reservation_last_sweep', '1970-01-01 00:00:00'),
 ('block_unpaid_fines', '0');
 
 

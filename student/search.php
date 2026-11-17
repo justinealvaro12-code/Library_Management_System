@@ -2,6 +2,7 @@
 require_once '../includes/config.php';
 require_once '../includes/pagination.php';
 require_once '../includes/book_cover.php';
+require_once '../includes/reservations.php';
 requireRole('student');
 
 $pageTitle  = 'Search Books';
@@ -33,6 +34,18 @@ $paramsP = array_merge($params, [$pager['per_page'], $pager['offset']]);
 $books   = dbSelect($conn, "SELECT * FROM books $where ORDER BY title ASC LIMIT ? OFFSET ?", $typesP, $paramsP);
 $categories = $conn->query("SELECT DISTINCT category FROM books ORDER BY category");
 
+$activeReservedIds = [];
+$activeReservedRes = dbSelect(
+    $conn,
+    "SELECT book_id FROM reservations WHERE user_id = ? AND status IN ('waiting','ready')",
+    'i',
+    [(int)$_SESSION['user_id']]
+);
+while ($activeReserved = $activeReservedRes->fetch_assoc()) {
+    $activeReservedIds[(int)$activeReserved['book_id']] = true;
+}
+$reserveError = trim($_GET['reserve_error'] ?? '');
+
 require_once '../includes/header.php';
 ?>
 
@@ -40,6 +53,10 @@ require_once '../includes/header.php';
   <h1>Search Books</h1>
   <p>Browse the library catalog and find books to borrow.</p>
 </div>
+
+<?php if ($reserveError !== ''): ?>
+  <div class="alert alert-danger"><?= htmlspecialchars($reserveError) ?></div>
+<?php endif; ?>
 
 <div class="card" style="margin-bottom:20px">
   <form method="GET" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
@@ -73,8 +90,11 @@ require_once '../includes/header.php';
 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">
 <?php while ($b = $books->fetch_assoc()):
   $bookYear = (int)($b['year_published'] ?? 0);
+  $bookState = reservationBookState($conn, (int)$b['id']);
+  $effectiveAvailable = $bookState ? max(0, (int)$bookState['effective_available']) : 0;
+  $hasActiveReservation = isset($activeReservedIds[(int)$b['id']]);
 ?>
-  <div style="background:white;border-radius:12px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,0.06);border-top:3px solid <?= $b['available_copies']>0?'#27ae60':'#e74c3c' ?>">
+  <div style="background:white;border-radius:12px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,0.06);border-top:3px solid <?= $effectiveAvailable>0?'#27ae60':'#e74c3c' ?>">
     <div style="display:flex;gap:14px;align-items:flex-start">
       <img src="<?= htmlspecialchars(bookCoverUrl($b['cover_image'] ?? '')) ?>" alt="" class="cover-thumb cover-thumb-search" loading="lazy">
       <div style="min-width:0;flex:1">
@@ -90,15 +110,23 @@ require_once '../includes/header.php';
       </div>
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid #f0f0f0">
-      <span class="badge <?= $b['available_copies']>0?'badge-success':'badge-danger' ?>">
-        <?= $b['available_copies'] > 0 ? "✅ {$b['available_copies']} Available" : "⛔ Unavailable" ?>
+      <span class="badge <?= $effectiveAvailable>0?'badge-success':'badge-danger' ?>">
+        <?= $effectiveAvailable > 0 ? "✅ {$effectiveAvailable} Available" : "⛔ Unavailable" ?>
       </span>
       <?php if (!empty($b['isbn'])): ?>
         <span style="font-size:11px;color:#ccc">ISBN: <?= htmlspecialchars($b['isbn'] ?? '') ?></span>
       <?php endif; ?>
     </div>
-    <?php if ($b['available_copies'] == 0): ?>
-      <p style="font-size:12px;color:#e74c3c;margin-top:8px">Ask a librarian for assistance.</p>
+    <?php if ($effectiveAvailable === 0): ?>
+      <?php if ($hasActiveReservation): ?>
+        <p style="font-size:12px;margin-top:10px"><a href="reservations.php" class="btn btn-sm btn-outline">Reservation active — view queue</a></p>
+      <?php else: ?>
+        <form method="POST" action="reserve.php" style="margin-top:10px">
+          <?= csrfField() ?>
+          <input type="hidden" name="book_id" value="<?= (int)$b['id'] ?>">
+          <button type="submit" class="btn btn-sm btn-gold">Reserve</button>
+        </form>
+      <?php endif; ?>
     <?php endif; ?>
   </div>
 <?php endwhile; ?>

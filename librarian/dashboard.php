@@ -1,12 +1,14 @@
 <?php
 require_once '../includes/config.php';
 requireRole('librarian');
+require_once '../includes/reservations.php';
 
 $pageTitle  = 'Librarian Dashboard';
 $activePage = 'dashboard';
 
 $activeBorrows = $conn->query("SELECT COUNT(*) c FROM borrow_records WHERE status='borrowed'")->fetch_assoc()['c'];
 $overdue       = $conn->query("SELECT COUNT(*) c FROM borrow_records WHERE status='borrowed' AND due_date < CURDATE()")->fetch_assoc()['c'];
+$readyPickup   = $conn->query("SELECT COUNT(*) c FROM reservations WHERE status='ready'")->fetch_assoc()['c'];
 $issuedToday   = $conn->query("SELECT COUNT(*) c FROM borrow_records WHERE DATE(issue_date)=CURDATE()")->fetch_assoc()['c'];
 $returnedToday = $conn->query("SELECT COUNT(*) c FROM borrow_records WHERE DATE(return_date)=CURDATE()")->fetch_assoc()['c'];
 
@@ -37,6 +39,7 @@ require_once '../includes/header.php';
     <div class="stat-value"><?= $overdue ?></div>
     <div class="stat-label">Overdue</div>
   </div>
+  <div class="stat-card" style="--accent:#d97706"><div class="stat-value"><?= (int)$readyPickup ?></div><div class="stat-label">Ready for Pickup</div></div>
   <div class="stat-card" style="--accent:#27ae60">
     <div class="stat-icon">➕</div>
     <div class="stat-value"><?= $issuedToday ?></div>

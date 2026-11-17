@@ -157,6 +157,9 @@ function requireRole($role) {
     if ($_SESSION['user_role'] !== $role && $_SESSION['user_role'] !== 'admin') {
         redirect(SITE_URL . '/index.php?error=unauthorized');
     }
+
+    require_once __DIR__ . '/reservations.php';
+    reservationExpirySweep($GLOBALS['conn'], (int)$_SESSION['user_id'], $GLOBALS['settings'] ?? []);
 }
 
 function getUser($conn, $id) {

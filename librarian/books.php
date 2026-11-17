@@ -41,7 +41,7 @@ $countRes = dbSelect($conn, "SELECT COUNT(*) c FROM books $where", $types, $para
 $totalBooks = (int)($countRes ? $countRes->fetch_assoc()['c'] : 0);
 $pager = paginate($totalBooks, 20);
 
-$sql = "SELECT * FROM books $where ORDER BY title ASC LIMIT ? OFFSET ?";
+$sql = "SELECT b.*, " . reservationEffectiveAvailableSql('b') . " AS effective_available FROM books b $where ORDER BY title ASC LIMIT ? OFFSET ?";
 $typesP = $types . 'ii';
 $paramsP = array_merge($params, [$pager['per_page'], $pager['offset']]);
 $books = dbSelect($conn, $sql, $typesP, $paramsP);
@@ -100,7 +100,7 @@ require_once '../includes/header.php';
           <td><span class="badge badge-info"><?= htmlspecialchars($b['category'] ?? '') ?></span></td>
           <td style="font-size:12px;color:#aaa"><?= htmlspecialchars($b['isbn'] ?? '') ?></td>
           <td><?= $b['total_copies'] ?></td>
-          <td><span class="badge <?= $b['available_copies'] > 0 ? 'badge-success' : 'badge-danger' ?>"><?= $b['available_copies'] ?></span></td>
+          <td><span class="badge <?= $b['effective_available'] > 0 ? 'badge-success' : 'badge-danger' ?>"><?= $b['effective_available'] ?></span></td>
           <td style="font-size:12px;color:#aaa"><?= htmlspecialchars($b['location'] ?? '') ?></td>
           <td><a href="?action=edit&id=<?= $b['id'] ?>" class="btn btn-sm btn-outline">Edit</a></td>
         </tr>

@@ -41,7 +41,7 @@ if ($searchRaw !== '') {
 $countRes = dbSelect($conn, "SELECT COUNT(*) c FROM books $where", $types, $params);
 $totalBooks = (int)($countRes ? $countRes->fetch_assoc()['c'] : 0);
 $pager = paginate($totalBooks, 20);
-$sql = "SELECT * FROM books $where ORDER BY title ASC LIMIT ? OFFSET ?";
+$sql = "SELECT b.*, " . reservationEffectiveAvailableSql('b') . " AS effective_available FROM books b $where ORDER BY title ASC LIMIT ? OFFSET ?";
 $typesP = $types . 'ii';
 $paramsP = array_merge($params, [$pager['per_page'], $pager['offset']]);
 $books = dbSelect($conn, $sql, $typesP, $paramsP);
@@ -102,8 +102,8 @@ require_once '../includes/header.php';
           <td><span class="badge badge-info"><?= htmlspecialchars($book['category'] ?? '') ?></span></td>
           <td><?= $book['total_copies'] ?></td>
           <td>
-            <span class="badge <?= $book['available_copies'] > 0 ? 'badge-success' : 'badge-danger' ?>">
-              <?= $book['available_copies'] ?>
+            <span class="badge <?= $book['effective_available'] > 0 ? 'badge-success' : 'badge-danger' ?>">
+              <?= $book['effective_available'] ?>
             </span>
           </td>
           <td style="font-size:12px;color:#888"><?= htmlspecialchars($book['location'] ?? '') ?></td>

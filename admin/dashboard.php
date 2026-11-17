@@ -1,6 +1,7 @@
 <?php
 require_once '../includes/config.php';
 requireRole('admin');
+require_once '../includes/reservations.php';
 
 $pageTitle  = 'Admin Dashboard';
 $activePage = 'dashboard';
@@ -10,6 +11,7 @@ $totalBooks     = $conn->query("SELECT COUNT(*) c FROM books")->fetch_assoc()['c
 $totalUsers     = $conn->query("SELECT COUNT(*) c FROM users WHERE role='student'")->fetch_assoc()['c'];
 $activeBorrows  = $conn->query("SELECT COUNT(*) c FROM borrow_records WHERE status='borrowed'")->fetch_assoc()['c'];
 $overdue        = $conn->query("SELECT COUNT(*) c FROM borrow_records WHERE status='borrowed' AND due_date < CURDATE()")->fetch_assoc()['c'];
+$readyPickup    = $conn->query("SELECT COUNT(*) c FROM reservations WHERE status='ready'")->fetch_assoc()['c'];
 $returnedToday  = $conn->query("SELECT COUNT(*) c FROM borrow_records WHERE DATE(return_date)=CURDATE()")->fetch_assoc()['c'];
 $issuedToday    = $conn->query("SELECT COUNT(*) c FROM borrow_records WHERE DATE(issue_date)=CURDATE()")->fetch_assoc()['c'];
 
@@ -51,6 +53,7 @@ require_once '../includes/header.php';
     <div class="stat-value"><?= $overdue ?></div>
     <div class="stat-label">Overdue</div>
   </div>
+  <div class="stat-card" style="--accent:#d97706"><div class="stat-value"><?= (int)$readyPickup ?></div><div class="stat-label">Ready for Pickup</div></div>
   <div class="stat-card" style="--accent:#9b59b6">
     <div class="stat-icon">↩️</div>
     <div class="stat-value"><?= $returnedToday ?></div>

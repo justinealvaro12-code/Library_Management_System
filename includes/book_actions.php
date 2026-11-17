@@ -2,6 +2,7 @@
 if (!defined('SITE_URL')) { http_response_code(403); exit('Forbidden'); }
 
 require_once __DIR__ . '/book_cover.php';
+require_once __DIR__ . '/reservations.php';
 
 /**
  * Handle add/update/delete POST actions for book management.
@@ -56,18 +57,17 @@ function bookHandlePost($conn, $postAction, $action, $editBook, $msg, $msgType) 
         if ($postAction === 'update') {
             $currentBook = dbSelect($conn, "SELECT total_copies, available_copies, cover_image FROM books WHERE id = ?", 'i', [$id])->fetch_assoc();
             $borrowed    = (int)dbSelect($conn, "SELECT COUNT(*) c FROM borrow_records WHERE book_id = ? AND status = 'borrowed'", 'i', [$id])->fetch_assoc()['c'];
+            $readyHolds  = (int)dbSelect($conn, "SELECT COUNT(*) c FROM reservations WHERE book_id = ? AND status = 'ready'", 'i', [$id])->fetch_assoc()['c'];
 
             if (!$currentBook) {
                 $errors[] = 'Book not found.';
             } else {
                 $existingCover = (string)($currentBook['cover_image'] ?? '');
                 $available = max(0, min($copies, (int)$currentBook['available_copies'] + ($copies - (int)$currentBook['total_copies'])));
-                if ($copies < $borrowed) {
-                    $errors[] = "Total copies cannot be less than the $borrowed currently borrowed.";
+                if ($copies < $borrowed + $readyHolds) {
+                    $errors[] = "Total copies cannot be less than the $borrowed borrowed and $readyHolds held reservation(s).";
                 }
             }
-
-            $status = $available > 0 ? 'available' : 'unavailable';
         }
 
         $cover = [
@@ -105,8 +105,8 @@ function bookHandlePost($conn, $postAction, $action, $editBook, $msg, $msgType) 
             $isbnSql = $isbn !== '' ? $isbn : null;
             $coverFile = $cover['filename'] !== null ? $cover['filename'] : null;
 
-            try {
-                if ($postAction === 'add') {
+            if ($postAction === 'add') {
+                try {
                     dbExecute(
                         $conn,
                         "INSERT INTO books (isbn, title, author, publisher, category, year_published, total_copies, available_copies, location, description, cover_image, status)
@@ -117,30 +117,100 @@ function bookHandlePost($conn, $postAction, $action, $editBook, $msg, $msgType) 
                     logActivity($conn, $_SESSION['user_id'], 'add_book', "Added: $title");
                     header("Location: books.php?msg=added");
                     exit();
+                } catch (mysqli_sql_exception $e) {
+                    if (!empty($cover['filename']) && $cover['filename'] !== $existingCover) {
+                        bookCoverDelete($cover['filename']);
+                    }
+                    $msgType = 'danger';
+                    $msg     = (int)$e->getCode() === 1062
+                        ? 'A book with that ISBN already exists.'
+                        : 'Unable to save the book. Please try again.';
+                    $action  = 'add';
+                }
+            } else {
+                $settings = $GLOBALS['settings'] ?? [];
+                $saveError = '';
+                $saved = false;
+
+                for ($attempt = 1; $attempt <= 2; $attempt++) {
+                    $conn->begin_transaction();
+                    try {
+                        $locked = dbSelect(
+                            $conn,
+                            "SELECT total_copies, available_copies FROM books WHERE id = ? FOR UPDATE",
+                            'i',
+                            [$id]
+                        )->fetch_assoc();
+
+                        if (!$locked) {
+                            throw new Exception('Book not found.');
+                        }
+
+                        $borrowed = (int)dbSelect(
+                            $conn,
+                            "SELECT COUNT(*) c FROM borrow_records WHERE book_id = ? AND status = 'borrowed'",
+                            'i',
+                            [$id]
+                        )->fetch_assoc()['c'];
+                        $readyHolds = (int)dbSelect(
+                            $conn,
+                            "SELECT COUNT(*) c FROM reservations WHERE book_id = ? AND status = 'ready'",
+                            'i',
+                            [$id]
+                        )->fetch_assoc()['c'];
+
+                        if ($copies < $borrowed + $readyHolds) {
+                            throw new Exception("Total copies cannot be less than the $borrowed borrowed and $readyHolds held reservation(s).");
+                        }
+
+                        $newAvailable = max(0, min($copies, (int)$locked['available_copies'] + ($copies - (int)$locked['total_copies'])));
+                        if ($newAvailable < $readyHolds) {
+                            throw new Exception('Total copies would not cover all held reservations.');
+                        }
+
+                        dbExecute(
+                            $conn,
+                            "UPDATE books SET isbn = ?, title = ?, author = ?, publisher = ?, category = ?, year_published = ?,
+                             total_copies = ?, available_copies = ?, location = ?, description = ?, cover_image = ? WHERE id = ?",
+                            'sssssiiisssi',
+                            [$isbnSql, $title, $author, $publisher, $category, $year, $copies, $newAvailable, $location, $desc, $coverFile, $id]
+                        );
+
+                        reservationPromoteQueue($conn, $id, (int)$_SESSION['user_id'], $settings);
+                        $conn->commit();
+                        $saved = true;
+                        break;
+                    } catch (mysqli_sql_exception $e) {
+                        $conn->rollback();
+                        if ((int)$e->getCode() === 1213 && $attempt === 1) {
+                            continue;
+                        }
+                        $saveError = (int)$e->getCode() === 1062
+                            ? 'A book with that ISBN already exists.'
+                            : 'Unable to save the book. Please try again.';
+                        break;
+                    } catch (Exception $e) {
+                        $conn->rollback();
+                        $saveError = $e->getMessage();
+                        break;
+                    }
                 }
 
-                dbExecute(
-                    $conn,
-                    "UPDATE books SET isbn = ?, title = ?, author = ?, publisher = ?, category = ?, year_published = ?,
-                     total_copies = ?, available_copies = ?, location = ?, description = ?, cover_image = ?, status = ? WHERE id = ?",
-                    'sssssiiissssi',
-                    [$isbnSql, $title, $author, $publisher, $category, $year, $copies, $available, $location, $desc, $coverFile, $status, $id]
-                );
-                if (!empty($cover['old_to_delete'])) {
-                    bookCoverDelete($cover['old_to_delete']);
+                if ($saved) {
+                    if (!empty($cover['old_to_delete'])) {
+                        bookCoverDelete($cover['old_to_delete']);
+                    }
+                    logActivity($conn, $_SESSION['user_id'], 'update_book', "Updated: $title");
+                    header("Location: books.php?msg=updated");
+                    exit();
                 }
-                logActivity($conn, $_SESSION['user_id'], 'update_book', "Updated: $title");
-                header("Location: books.php?msg=updated");
-                exit();
-            } catch (mysqli_sql_exception $e) {
+
                 if (!empty($cover['filename']) && $cover['filename'] !== $existingCover) {
                     bookCoverDelete($cover['filename']);
                 }
                 $msgType = 'danger';
-                $msg     = (int)$e->getCode() === 1062
-                    ? 'A book with that ISBN already exists.'
-                    : 'Unable to save the book. Please try again.';
-                $action  = $postAction === 'add' ? 'add' : 'edit';
+                $msg     = $saveError !== '' ? $saveError : 'Unable to save the book. Please try again.';
+                $action  = 'edit';
             }
         }
     } elseif ($postAction === 'delete') {
@@ -150,23 +220,37 @@ function bookHandlePost($conn, $postAction, $action, $editBook, $msg, $msgType) 
 
         $id      = (int)($_POST['id'] ?? 0);
         $records = (int)dbSelect($conn, "SELECT COUNT(*) c FROM borrow_records WHERE book_id = ?", 'i', [$id])->fetch_assoc()['c'];
+        $reservations = (int)dbSelect($conn, "SELECT COUNT(*) c FROM reservations WHERE book_id = ?", 'i', [$id])->fetch_assoc()['c'];
 
-        if ($records > 0) {
+        if ($records > 0 || $reservations > 0) {
             $msgType = 'danger';
-            $msg     = "Cannot delete this book: it has $records borrowing record(s) in the system. Consider marking it Unavailable instead.";
+            $parts = [];
+            if ($records > 0) {
+                $parts[] = "$records borrowing record(s)";
+            }
+            if ($reservations > 0) {
+                $parts[] = "$reservations reservation(s)";
+            }
+            $msg = 'Cannot delete this book: it has ' . implode(' and ', $parts) . ' in the system. Consider marking it Unavailable instead.';
         } else {
             $bookRow = dbSelect($conn, "SELECT cover_image FROM books WHERE id = ?", 'i', [$id])->fetch_assoc();
             $coverToDelete = (string)($bookRow['cover_image'] ?? '');
 
-            try {
-                dbExecute($conn, "DELETE FROM books WHERE id = ?", 'i', [$id]);
-                bookCoverDelete($coverToDelete);
-                logActivity($conn, $_SESSION['user_id'], 'delete_book', "Deleted book #$id");
-                header("Location: books.php?msg=deleted");
-                exit();
-            } catch (mysqli_sql_exception $e) {
-                $msgType = 'danger';
-                $msg     = 'Unable to delete this book because it is referenced by other records.';
+            for ($attempt = 1; $attempt <= 2; $attempt++) {
+                try {
+                    dbExecute($conn, "DELETE FROM books WHERE id = ?", 'i', [$id]);
+                    bookCoverDelete($coverToDelete);
+                    logActivity($conn, $_SESSION['user_id'], 'delete_book', "Deleted book #$id");
+                    header("Location: books.php?msg=deleted");
+                    exit();
+                } catch (mysqli_sql_exception $e) {
+                    if ((int)$e->getCode() === 1213 && $attempt === 1) {
+                        continue;
+                    }
+                    $msgType = 'danger';
+                    $msg     = 'Unable to delete this book because it is referenced by other records.';
+                    break;
+                }
             }
         }
     }

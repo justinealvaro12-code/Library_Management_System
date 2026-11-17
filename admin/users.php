@@ -1,6 +1,7 @@
 <?php
 require_once '../includes/config.php';
 require_once '../includes/pagination.php';
+require_once '../includes/reservations.php';
 requireRole('admin');
 
 $pageTitle     = 'Manage Users';
@@ -107,10 +108,94 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $msgType = 'danger';
                 $msg     = 'Cannot disable the last active administrator.';
             } else {
-                dbExecute($conn, "UPDATE users SET status = IF(status='active','inactive','active') WHERE id = ?", 'i', [$id]);
-                logActivity($conn, $_SESSION['user_id'], 'toggle_user', "Toggled status for user #$id");
-                header("Location: users.php?msg=updated");
-                exit();
+                $settings = $GLOBALS['settings'] ?? [];
+                $toggleError = '';
+                $toggled = false;
+
+                for ($attempt = 1; $attempt <= 2; $attempt++) {
+                    $conn->begin_transaction();
+                    try {
+                        $bookIds = [];
+                        $bookRes = dbSelect(
+                            $conn,
+                            "SELECT DISTINCT book_id FROM reservations
+                             WHERE user_id = ? AND status IN ('waiting','ready') ORDER BY book_id ASC",
+                            'i',
+                            [$id]
+                        );
+                        while ($row = $bookRes->fetch_assoc()) {
+                            $bookIds[] = (int)$row['book_id'];
+                        }
+
+                        foreach ($bookIds as $bookId) {
+                            dbSelect($conn, "SELECT id FROM books WHERE id = ? FOR UPDATE", 'i', [$bookId]);
+                        }
+
+                        $lockedUser = dbSelect($conn, "SELECT status FROM users WHERE id = ? FOR UPDATE", 'i', [$id])->fetch_assoc();
+                        if (!$lockedUser) {
+                            throw new Exception('User not found.');
+                        }
+
+                        $newStatus = $lockedUser['status'] === 'active' ? 'inactive' : 'active';
+                        if ($lockedUser['status'] === 'active') {
+                            $activeRows = dbSelect(
+                                $conn,
+                                "SELECT id, book_id FROM reservations
+                                 WHERE user_id = ? AND status IN ('waiting','ready')
+                                 ORDER BY book_id ASC, id ASC FOR UPDATE",
+                                'i',
+                                [$id]
+                            );
+
+                            $affectedBooks = [];
+                            while ($row = $activeRows->fetch_assoc()) {
+                                dbExecute(
+                                    $conn,
+                                    "UPDATE reservations SET status = 'cancelled', expiry_date = NULL WHERE id = ? AND status IN ('waiting','ready')",
+                                    'i',
+                                    [(int)$row['id']]
+                                );
+                                logActivity(
+                                    $conn,
+                                    $_SESSION['user_id'],
+                                    'reservation_cancelled',
+                                    "Reservation #{$row['id']} cancelled because user #$id was disabled"
+                                );
+                                $affectedBooks[(int)$row['book_id']] = true;
+                            }
+
+                            ksort($affectedBooks, SORT_NUMERIC);
+                            foreach (array_keys($affectedBooks) as $bookId) {
+                                reservationPromoteQueue($conn, (int)$bookId, (int)$_SESSION['user_id'], $settings);
+                            }
+                        }
+
+                        dbExecute($conn, "UPDATE users SET status = ? WHERE id = ?", 'si', [$newStatus, $id]);
+                        $conn->commit();
+                        $toggled = true;
+                        break;
+                    } catch (mysqli_sql_exception $e) {
+                        $conn->rollback();
+                        if ((int)$e->getCode() === 1213 && $attempt === 1) {
+                            continue;
+                        }
+                        $toggleError = 'Unable to update the account status due to a database error.';
+                        break;
+                    } catch (Exception $e) {
+                        $conn->rollback();
+                        $toggleError = $e->getMessage();
+                        break;
+                    }
+                }
+
+                if ($toggled) {
+                    logActivity($conn, $_SESSION['user_id'], 'toggle_user', "Toggled status for user #$id");
+                    header("Location: users.php?msg=updated");
+                    exit();
+                }
+
+                $msgType = 'danger';
+                $msg = $toggleError !== '' ? $toggleError : 'Unable to update the account status.';
             }
         }
     } elseif ($postAction === 'delete') {
@@ -125,6 +210,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $msg     = 'User not found.';
         } else {
             $records = (int)dbSelect($conn, "SELECT COUNT(*) c FROM borrow_records WHERE user_id = ?", 'i', [$id])->fetch_assoc()['c'];
+            $reservations = (int)dbSelect($conn, "SELECT COUNT(*) c FROM reservations WHERE user_id = ?", 'i', [$id])->fetch_assoc()['c'];
 
             $lastActiveAdmin = false;
             if ($target['role'] === 'admin' && $target['status'] === 'active') {
@@ -132,9 +218,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $lastActiveAdmin = ($otherAdmins === 0);
             }
 
-            if ($records > 0) {
+            if ($records > 0 || $reservations > 0) {
                 $msgType = 'danger';
-                $msg     = "Cannot delete this user: they have $records borrowing record(s) in the system. Consider disabling the account instead.";
+                $parts = [];
+                if ($records > 0) {
+                    $parts[] = "$records borrowing record(s)";
+                }
+                if ($reservations > 0) {
+                    $parts[] = "$reservations reservation(s)";
+                }
+                $msg     = 'Cannot delete this user: they have ' . implode(' and ', $parts) . ' in the system. Consider disabling the account instead.';
             } elseif ($lastActiveAdmin) {
                 $msgType = 'danger';
                 $msg     = 'Cannot delete the last active administrator.';

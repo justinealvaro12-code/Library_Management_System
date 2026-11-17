@@ -1,56 +1,88 @@
 <?php
 require_once '../includes/config.php';
+require_once '../includes/reservations.php';
 requireRole('librarian');
 
 $pageTitle  = 'Return Book';
 $activePage = 'return_book';
 
 $msg = '';
+$prefillBorrow = (int)($_GET['borrow_id'] ?? 0);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $borrow_id = (int)($_POST['borrow_id'] ?? 0);
-    $lib_id    = $_SESSION['user_id'];
+    $lib_id    = (int)$_SESSION['user_id'];
     $today     = date('Y-m-d');
 
-    $conn->begin_transaction();
-    try {
-        $result = dbSelect($conn, "SELECT * FROM borrow_records WHERE id = ? AND status = 'borrowed' FOR UPDATE", 'i', [$borrow_id]);
-        $record = $result->fetch_assoc();
+    $seed = dbSelect($conn, "SELECT book_id FROM borrow_records WHERE id = ?", 'i', [$borrow_id])->fetch_assoc();
+    if (!$seed) {
+        $msg = 'error:Record not found or already returned.';
+    } else {
+        $book_id = (int)$seed['book_id'];
+        for ($attempt = 1; $attempt <= 2; $attempt++) {
+            $conn->begin_transaction();
+            try {
+                dbSelect($conn, "SELECT id FROM books WHERE id = ? FOR UPDATE", 'i', [$book_id]);
+                $record = dbSelect(
+                    $conn,
+                    "SELECT * FROM borrow_records WHERE id = ? AND status = 'borrowed' FOR UPDATE",
+                    'i',
+                    [$borrow_id]
+                )->fetch_assoc();
 
-        if (!$record) {
-            throw new Exception('Record not found or already returned.');
+                if (!$record) {
+                    throw new Exception('Record not found or already returned.');
+                }
+
+                $fine = calculateFine($record['due_date']);
+                $fineStr = number_format($fine, 2, '.', '');
+
+                dbExecute(
+                    $conn,
+                    "UPDATE borrow_records SET status='returned', return_date = ?, fine_amount = ?, received_by = ? WHERE id = ? AND status='borrowed'",
+                    'ssii',
+                    [$today, $fineStr, $lib_id, $borrow_id]
+                );
+                dbExecute(
+                    $conn,
+                    "UPDATE books SET available_copies = LEAST(total_copies, available_copies + 1) WHERE id = ?",
+                    'i',
+                    [$book_id]
+                );
+
+                reservationPromoteQueue($conn, $book_id, $lib_id, $settings);
+                $conn->commit();
+
+                logActivity($conn, $lib_id, 'return_book', "Returned borrow #$borrow_id");
+                $fineMsg = $fine > 0 ? " Fine: PHP " . number_format($fine, 2) : "";
+                $msg = "success:Book returned successfully!$fineMsg";
+                break;
+            } catch (mysqli_sql_exception $e) {
+                $conn->rollback();
+                if ((int)$e->getCode() === 1213 && $attempt === 1) {
+                    continue;
+                }
+                $msg = (int)$e->getCode() === 1062
+                    ? 'error:This return conflicts with another request. Please try again.'
+                    : 'error:Unable to return the book due to a database error.';
+                break;
+            } catch (Exception $e) {
+                $conn->rollback();
+                $msg = 'error:' . $e->getMessage();
+                break;
+            }
         }
-
-        $fine    = calculateFine($record['due_date']);
-        $fineStr = number_format($fine, 2, '.', '');
-
-        dbExecute(
-            $conn,
-            "UPDATE borrow_records SET status='returned', return_date = ?, fine_amount = ?, received_by = ? WHERE id = ? AND status='borrowed'",
-            'ssii',
-            [$today, $fineStr, (int)$lib_id, $borrow_id]
-        );
-        dbExecute($conn, "UPDATE books SET available_copies = LEAST(total_copies, available_copies + 1), status = 'available' WHERE id = ?", 'i', [(int)$record['book_id']]);
-        $conn->commit();
-
-        logActivity($conn, $lib_id, 'return_book', "Returned borrow #$borrow_id");
-        $fineMsg = $fine > 0 ? " Fine: ₱" . number_format($fine, 2) : "";
-        $msg = "success:Book returned successfully!$fineMsg";
-    } catch (Exception $e) {
-        $conn->rollback();
-        $msg = 'error:' . ($e instanceof mysqli_sql_exception ? 'Unable to return the book due to a database error.' : $e->getMessage());
     }
 }
 
-// Active borrows
-$borrows = $conn->query("
+$borrows = dbSelect($conn, "
     SELECT br.id, br.due_date, u.full_name, u.student_id, b.title, b.author
     FROM borrow_records br
     JOIN users u ON br.user_id=u.id
     JOIN books b ON br.book_id=b.id
     WHERE br.status='borrowed'
-    ORDER BY br.due_date ASC
-");
+    ORDER BY (br.id = ?) DESC, br.due_date ASC
+", 'i', [$prefillBorrow]);
 
 require_once '../includes/header.php';
 ?>
@@ -62,7 +94,7 @@ require_once '../includes/header.php';
 
 <?php if ($msg): ?>
   <?php [$type, $text] = explode(':', $msg, 2); ?>
-  <div class="alert alert-<?= $type === 'success' ? 'success' : 'danger' ?>"><?= $type==='success'?'✅':'⚠️' ?> <?= htmlspecialchars($text) ?></div>
+  <div class="alert alert-<?= $type === 'success' ? 'success' : 'danger' ?>"><?= htmlspecialchars($text) ?></div>
 <?php endif; ?>
 
 <div class="card">
@@ -100,7 +132,7 @@ require_once '../includes/header.php';
           </td>
           <td>
             <?php if ($fine > 0): ?>
-              <span style="color:#e74c3c;font-weight:600">₱<?= number_format($fine,2) ?></span>
+              <span style="color:#e74c3c;font-weight:600">PHP <?= number_format($fine,2) ?></span>
             <?php else: ?>
               <span style="color:#27ae60">No fine</span>
             <?php endif; ?>
