@@ -175,11 +175,19 @@ function reservationExpirySweep($conn, int $actorId, array $settings): int {
                 return 0;
             }
 
-            dbExecute(
-                $conn,
-                "INSERT INTO settings (setting_key, setting_value) VALUES ('reservation_last_sweep', DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i:%s'))
-                 ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)"
-            );
+            if ($lastRow) {
+                dbExecute(
+                    $conn,
+                    "UPDATE settings SET setting_value = DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i:%s')
+                     WHERE setting_key = 'reservation_last_sweep'"
+                );
+            } else {
+                dbExecute(
+                    $conn,
+                    "INSERT INTO settings (setting_key, setting_value)
+                     VALUES ('reservation_last_sweep', DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i:%s'))"
+                );
+            }
 
             $result = dbSelect(
                 $conn,
