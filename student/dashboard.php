@@ -35,27 +35,11 @@ require_once '../includes/header.php';
   <p>Welcome, <?= htmlspecialchars(explode(' ',$_SESSION['user_name'])[0]) ?>! Manage your borrowed books here.</p>
 </div>
 
-<div class="stats-grid">
-  <div class="stat-card" style="--accent:#2980b9">
-    <div class="stat-icon">📖</div>
-    <div class="stat-value"><?= $activeBorrows ?> / <?= $maxBooks ?></div>
-    <div class="stat-label">Books Borrowed</div>
-  </div>
-  <div class="stat-card" style="--accent:#27ae60">
-    <div class="stat-icon">📚</div>
-    <div class="stat-value"><?= $totalBorrowed ?></div>
-    <div class="stat-label">Total Borrowed (All Time)</div>
-  </div>
-  <div class="stat-card" style="--accent:#e74c3c">
-    <div class="stat-icon">⚠️</div>
-    <div class="stat-value"><?= $overdueCount ?></div>
-    <div class="stat-label">Overdue Books</div>
-  </div>
-  <div class="stat-card" style="--accent:#e67e22">
-    <div class="stat-icon">💸</div>
-    <div class="stat-value">₱<?= number_format($unpaidBalance, 2) ?></div>
-    <div class="stat-label">Unpaid Fine Balance</div>
-  </div>
+<div class="dashboard-kpi-grid">
+  <div class="kpi-card" style="--accent:#2980b9"><span class="stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M4 5.5v16M8 7h8M8 11h8"/></svg></span><div class="stat-value"><?= $activeBorrows ?> / <?= $maxBooks ?></div><div class="stat-label">Books Borrowed</div></div>
+  <div class="kpi-card" style="--accent:#27ae60"><span class="stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M4 5.5v16M8 7h8M8 11h8"/></svg></span><div class="stat-value"><?= $totalBorrowed ?></div><div class="stat-label">Total Borrowed (All Time)</div></div>
+  <div class="kpi-card" style="--accent:#e74c3c"><span class="stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 1.5M9 2h6M12 2v3"/></svg></span><div class="stat-value"><?= $overdueCount ?></div><div class="stat-label">Overdue Books</div></div>
+  <div class="kpi-card" style="--accent:#e67e22"><span class="stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6zM15 3v5h4M9 12h7M9 16h7M4 7v14"/></svg></span><div class="stat-value">₱<?= number_format($unpaidBalance, 2) ?></div><div class="stat-label">Unpaid Fine Balance</div></div>
 </div>
 
 <?php if ($overdueCount > 0): ?>

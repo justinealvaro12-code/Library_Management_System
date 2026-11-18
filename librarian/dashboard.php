@@ -28,31 +28,15 @@ require_once '../includes/header.php';
   <p>Good day, <?= htmlspecialchars(explode(' ',$_SESSION['user_name'])[0]) ?>! Here's today's library status.</p>
 </div>
 
-<div class="stats-grid">
-  <div class="stat-card" style="--accent:#2980b9">
-    <div class="stat-icon">📖</div>
-    <div class="stat-value"><?= $activeBorrows ?></div>
-    <div class="stat-label">Active Borrows</div>
-  </div>
-  <div class="stat-card" style="--accent:#e74c3c">
-    <div class="stat-icon">⚠️</div>
-    <div class="stat-value"><?= $overdue ?></div>
-    <div class="stat-label">Overdue</div>
-  </div>
-  <div class="stat-card" style="--accent:#d97706"><div class="stat-value"><?= (int)$readyPickup ?></div><div class="stat-label">Ready for Pickup</div></div>
-  <div class="stat-card" style="--accent:#27ae60">
-    <div class="stat-icon">➕</div>
-    <div class="stat-value"><?= $issuedToday ?></div>
-    <div class="stat-label">Issued Today</div>
-  </div>
-  <div class="stat-card" style="--accent:#9b59b6">
-    <div class="stat-icon">↩️</div>
-    <div class="stat-value"><?= $returnedToday ?></div>
-    <div class="stat-label">Returned Today</div>
-  </div>
+<div class="dashboard-kpi-grid">
+  <div class="kpi-card" style="--accent:#2980b9"><span class="stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M4 5.5v16M8 7h8M8 11h8"/></svg></span><div class="stat-value"><?= $activeBorrows ?></div><div class="stat-label">Active Borrows</div></div>
+  <div class="kpi-card" style="--accent:#e74c3c"><span class="stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 1.5M9 2h6M12 2v3"/></svg></span><div class="stat-value"><?= $overdue ?></div><div class="stat-label">Overdue</div></div>
+  <div class="kpi-card" style="--accent:#d97706"><span class="stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 10h18v10H3zM3 10l2-6h14l2 6M12 10v7m-3-3 3 3 3-3"/></svg></span><div class="stat-value"><?= (int)$readyPickup ?></div><div class="stat-label">Ready for Pickup</div></div>
+  <div class="kpi-card" style="--accent:#27ae60"><span class="stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M4 5.5v16M8 7h8M8 11h8M16 14v4m-3-3 3-3 3 3"/></svg></span><div class="stat-value"><?= $issuedToday ?></div><div class="stat-label">Issued Today</div></div>
+  <div class="kpi-card" style="--accent:#9b59b6"><span class="stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M4 5.5v16M8 7h8M8 11h8M16 14v4m-3-3 3 3 3-3"/></svg></span><div class="stat-value"><?= $returnedToday ?></div><div class="stat-label">Returned Today</div></div>
 </div>
 
-<div style="display:grid;grid-template-columns:2fr 1fr;gap:20px">
+<div class="dashboard-panels">
   <div class="card">
     <div class="card-title">Recent Activity</div>
     <div class="table-wrap">
@@ -78,7 +62,7 @@ require_once '../includes/header.php';
 
   <div class="card">
     <div class="card-title">Quick Actions</div>
-    <div style="display:flex;flex-direction:column;gap:10px">
+    <div class="dashboard-actions">
       <a href="<?= SITE_URL ?>/librarian/issue_book.php" class="btn btn-primary">➕ Issue a Book</a>
       <a href="<?= SITE_URL ?>/librarian/return_book.php" class="btn btn-gold">↩️ Process Return</a>
       <a href="<?= SITE_URL ?>/librarian/books.php" class="btn btn-outline">📚 View Catalog</a>

@@ -42,32 +42,32 @@ $exportUrl = $exportBase . ($exportQuery !== '' ? '?' . $exportQuery : '');
 </div>
 
 <div class="report-kpi-grid">
-  <div class="report-kpi" style="--accent:#c9a84c">
+  <div class="kpi-card" style="--accent:#c9a84c">
     <span class="stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M4 5.5v16M8 7h8M8 11h8"/></svg></span>
     <div class="stat-value"><?= (int)$k['borrows'] ?></div>
     <div class="stat-label">Borrows</div>
   </div>
-  <div class="report-kpi" style="--accent:#27ae60">
+  <div class="kpi-card" style="--accent:#27ae60">
     <span class="stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 7v5h-5M4.5 10a7.5 7.5 0 0 1 13-3L20 12M4 17v-5h5M19.5 14a7.5 7.5 0 0 1-13 3L4 12"/></svg></span>
     <div class="stat-value"><?= (int)$k['returns'] ?></div>
     <div class="stat-label">Returns</div>
   </div>
-  <div class="report-kpi" style="--accent:#e74c3c">
+  <div class="kpi-card" style="--accent:#e74c3c">
     <span class="stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 1.5M9 2h6M12 2v3"/></svg></span>
     <div class="stat-value"><?= (int)$k['overdue'] ?></div>
     <div class="stat-label">Overdue at range end</div>
   </div>
-  <div class="report-kpi" style="--accent:#16a085">
+  <div class="kpi-card" style="--accent:#16a085">
     <span class="stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6zM15 3v5h4M9 12h7M9 16h7M4 7v14"/></svg></span>
     <div class="stat-value">₱<?= number_format((float)$k['fines_paid'], 2) ?></div>
     <div class="stat-label">Fines paid (returns in range)</div>
   </div>
-  <div class="report-kpi" style="--accent:#e67e22">
+  <div class="kpi-card" style="--accent:#e67e22">
     <span class="stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg></span>
     <div class="stat-value">₱<?= number_format((float)$k['fines_unpaid'], 2) ?></div>
     <div class="stat-label">Fines unpaid (returns in range)</div>
   </div>
-  <div class="report-kpi" style="--accent:#2980b9">
+  <div class="kpi-card" style="--accent:#2980b9">
     <span class="stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20v-1a6 6 0 0 1 12 0v1zM16 5a3 3 0 0 1 0 6M18 14a5 5 0 0 1 3 4.5V20h-4"/></svg></span>
     <div class="stat-value"><?= (int)$k['active_borrowers'] ?></div>
     <div class="stat-label">Active borrowers</div>

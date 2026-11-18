@@ -55,8 +55,8 @@ if ($role === 'admin') {
 }
 
 $navItems = match ($role) {
-    'admin' => array_merge(array_slice($navItems, 0, -1), [['url' => SITE_URL.'/librarian/reservations.php', 'icon' => '!', 'label' => 'Reservations', 'key' => 'reservations'], ['url' => SITE_URL.'/admin/overdue.php', 'icon' => '!', 'label' => 'Overdue', 'key' => 'overdue']], array_slice($navItems, -1)),
-    'librarian' => array_merge(array_slice($navItems, 0, -1), [['url' => SITE_URL.'/librarian/overdue.php', 'icon' => '!', 'label' => 'Overdue', 'key' => 'overdue']], array_slice($navItems, -1)),
+    'admin' => array_merge(array_slice($navItems, 0, -1), [['url' => SITE_URL.'/librarian/reservations.php', 'icon' => '📅', 'label' => 'Reservations', 'key' => 'reservations'], ['url' => SITE_URL.'/admin/overdue.php', 'icon' => '⚠️', 'label' => 'Overdue', 'key' => 'overdue']], array_slice($navItems, -1)),
+    'librarian' => array_merge(array_slice($navItems, 0, -1), [['url' => SITE_URL.'/librarian/overdue.php', 'icon' => '⚠️', 'label' => 'Overdue', 'key' => 'overdue']], array_slice($navItems, -1)),
     default => $navItems,
 };
 
@@ -211,7 +211,7 @@ $roleColor  = $roleColors[$role] ?? '#555';
 
   /* STATS GRID */
   .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
-  .stat-card, .report-kpi {
+  .stat-card, .kpi-card {
     background: white;
     border-radius: 12px;
     padding: 20px;
@@ -219,7 +219,7 @@ $roleColor  = $roleColors[$role] ?? '#555';
     position: relative;
     overflow: hidden;
   }
-  .stat-card::before, .report-kpi::before {
+  .stat-card::before, .kpi-card::before {
     content: '';
     position: absolute;
     top: 0; left: 0; right: 0;
@@ -351,12 +351,17 @@ $roleColor  = $roleColors[$role] ?? '#555';
   .report-filter .form-group { margin: 0; min-width: 170px; }
   .report-filter-actions { display: flex; gap: 8px; flex-wrap: wrap; }
   .report-range { font-size: 12px; color: #888; margin-top: 10px; }
-  .report-kpi-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: 1fr; gap: 20px; margin-bottom: 24px; align-items: stretch; }
-  .report-kpi { min-width: 0; height: 100%; padding: 20px; display: grid; grid-template-columns: 44px minmax(0, 1fr); grid-template-rows: auto auto; align-content: center; align-items: center; column-gap: 14px; }
-  .report-kpi .stat-icon { width: 44px; height: 44px; margin: 0; grid-row: 1 / 3; display: flex; align-items: center; justify-content: center; border-radius: 10px; color: var(--accent, var(--gold)); background: #f4f6fb; }
-  .report-kpi .stat-icon svg { display: block; width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-  .report-kpi .stat-value { min-width: 0; font-size: clamp(16px, 2vw, 28px); line-height: 1.2; font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .report-kpi .stat-label { min-height: 2.6em; margin-top: 2px; font-size: 12px; line-height: 1.3; color: #888; }
+  .report-kpi-grid, .dashboard-kpi-grid { display: grid; grid-auto-rows: 1fr; gap: 20px; margin-bottom: 24px; align-items: stretch; }
+  .report-kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .dashboard-kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .kpi-card { min-width: 0; height: 100%; padding: 20px; display: grid; grid-template-columns: 44px minmax(0, 1fr); grid-template-rows: auto auto; align-content: center; align-items: center; column-gap: 14px; }
+  .kpi-card .stat-icon { width: 44px; height: 44px; margin: 0; grid-row: 1 / 3; display: flex; align-items: center; justify-content: center; border-radius: 10px; color: var(--accent, var(--gold)); background: #f4f6fb; }
+  .kpi-card .stat-icon svg { display: block; width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .kpi-card .stat-value { min-width: 0; font-size: clamp(16px, 2vw, 28px); line-height: 1.2; font-weight: 600; color: var(--navy); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .kpi-card .stat-label { min-height: 2.6em; margin-top: 2px; font-size: 12px; line-height: 1.3; color: #888; }
+  .dashboard-panels { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+  .dashboard-actions { display: flex; flex-direction: column; gap: 10px; }
+  .dashboard-actions .btn { width: 100%; min-height: 40px; justify-content: flex-start; }
   .report-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin-bottom: 24px; }
   .chart-card .card-title { margin-bottom: 4px; }
   .chart-wrap { position: relative; height: 260px; margin-top: 16px; }
@@ -368,10 +373,16 @@ $roleColor  = $roleColors[$role] ?? '#555';
 
   @media (min-width: 600px) and (max-width: 1099px) {
     .report-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .dashboard-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
 
   @media (max-width: 599px) {
     .report-kpi-grid { grid-template-columns: minmax(0, 1fr); }
+    .dashboard-kpi-grid { grid-template-columns: minmax(0, 1fr); }
+  }
+
+  @media (max-width: 900px) {
+    .dashboard-panels { grid-template-columns: minmax(0, 1fr); }
   }
 
   @media (max-width: 768px) {

@@ -32,41 +32,17 @@ require_once '../includes/header.php';
   <p>Welcome back, <?= htmlspecialchars($_SESSION['user_name']) ?>. Here's what's happening today.</p>
 </div>
 
-<div class="stats-grid">
-  <div class="stat-card" style="--accent:#c9a84c">
-    <div class="stat-icon">📚</div>
-    <div class="stat-value"><?= $totalBooks ?></div>
-    <div class="stat-label">Total Books</div>
-  </div>
-  <div class="stat-card" style="--accent:#2980b9">
-    <div class="stat-icon">👥</div>
-    <div class="stat-value"><?= $totalUsers ?></div>
-    <div class="stat-label">Students</div>
-  </div>
-  <div class="stat-card" style="--accent:#27ae60">
-    <div class="stat-icon">📖</div>
-    <div class="stat-value"><?= $activeBorrows ?></div>
-    <div class="stat-label">Active Borrows</div>
-  </div>
-  <div class="stat-card" style="--accent:#e74c3c">
-    <div class="stat-icon">⚠️</div>
-    <div class="stat-value"><?= $overdue ?></div>
-    <div class="stat-label">Overdue</div>
-  </div>
-  <div class="stat-card" style="--accent:#d97706"><div class="stat-value"><?= (int)$readyPickup ?></div><div class="stat-label">Ready for Pickup</div></div>
-  <div class="stat-card" style="--accent:#9b59b6">
-    <div class="stat-icon">↩️</div>
-    <div class="stat-value"><?= $returnedToday ?></div>
-    <div class="stat-label">Returned Today</div>
-  </div>
-  <div class="stat-card" style="--accent:#e67e22">
-    <div class="stat-icon">➕</div>
-    <div class="stat-value"><?= $issuedToday ?></div>
-    <div class="stat-label">Issued Today</div>
-  </div>
+<div class="dashboard-kpi-grid">
+  <div class="kpi-card" style="--accent:#c9a84c"><span class="stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M4 5.5v16M8 7h8M8 11h8"/></svg></span><div class="stat-value"><?= $totalBooks ?></div><div class="stat-label">Total Books</div></div>
+  <div class="kpi-card" style="--accent:#2980b9"><span class="stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20v-1a6 6 0 0 1 12 0v1zM16 5a3 3 0 0 1 0 6M18 14a5 5 0 0 1 3 4.5V20h-4"/></svg></span><div class="stat-value"><?= $totalUsers ?></div><div class="stat-label">Students</div></div>
+  <div class="kpi-card" style="--accent:#2980b9"><span class="stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M4 5.5v16M8 7h8M8 11h8"/></svg></span><div class="stat-value"><?= $activeBorrows ?></div><div class="stat-label">Active Borrows</div></div>
+  <div class="kpi-card" style="--accent:#e74c3c"><span class="stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 1.5M9 2h6M12 2v3"/></svg></span><div class="stat-value"><?= $overdue ?></div><div class="stat-label">Overdue</div></div>
+  <div class="kpi-card" style="--accent:#d97706"><span class="stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 10h18v10H3zM3 10l2-6h14l2 6M12 10v7m-3-3 3 3 3-3"/></svg></span><div class="stat-value"><?= (int)$readyPickup ?></div><div class="stat-label">Ready for Pickup</div></div>
+  <div class="kpi-card" style="--accent:#9b59b6"><span class="stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M4 5.5v16M8 7h8M8 11h8M16 14v4m-3-3 3 3 3-3"/></svg></span><div class="stat-value"><?= $returnedToday ?></div><div class="stat-label">Returned Today</div></div>
+  <div class="kpi-card" style="--accent:#27ae60"><span class="stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M4 5.5v16M8 7h8M8 11h8M16 14v4m-3-3 3-3 3 3"/></svg></span><div class="stat-value"><?= $issuedToday ?></div><div class="stat-label">Issued Today</div></div>
 </div>
 
-<div style="display:grid;grid-template-columns:2fr 1fr;gap:20px;">
+<div class="dashboard-panels">
   <div class="card">
     <div class="card-title">Recent Transactions</div>
     <div class="table-wrap">
@@ -100,7 +76,7 @@ require_once '../includes/header.php';
 
   <div class="card">
     <div class="card-title">Quick Actions</div>
-    <div style="display:flex;flex-direction:column;gap:10px;">
+    <div class="dashboard-actions">
       <a href="<?= SITE_URL ?>/admin/users.php?action=add" class="btn btn-primary">👤 Add New User</a>
       <a href="<?= SITE_URL ?>/admin/books.php?action=add" class="btn btn-gold">📗 Add New Book</a>
       <a href="<?= SITE_URL ?>/admin/reports.php" class="btn btn-outline">📊 View Reports</a>
