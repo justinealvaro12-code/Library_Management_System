@@ -85,17 +85,20 @@ $roleColor  = $roleColors[$role] ?? '#555';
   .sidebar {
     width: var(--sidebar-w);
     background: var(--navy);
-    min-height: 100vh;
+    height: 100vh;
+    height: 100dvh;
     position: fixed;
     top: 0; left: 0;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
     z-index: 100;
     transition: transform 0.25s ease;
   }
   .sidebar-brand {
     padding: 24px 20px;
     border-bottom: 1px solid rgba(255,255,255,0.08);
+    flex: 0 0 auto;
   }
   .sidebar-brand h3 {
     font-family: 'Playfair Display', serif;
@@ -114,7 +117,18 @@ $roleColor  = $roleColors[$role] ?? '#555';
     margin-bottom: 8px;
   }
 
-  .nav-section { padding: 12px 0; flex: 1; }
+  .nav-section {
+    padding: 12px 0;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.25) transparent;
+  }
+  .nav-section::-webkit-scrollbar { width: 6px; }
+  .nav-section::-webkit-scrollbar-track { background: transparent; }
+  .nav-section::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.25); border-radius: 6px; }
   .nav-label {
     font-size: 10px;
     text-transform: uppercase;
@@ -141,10 +155,12 @@ $roleColor  = $roleColors[$role] ?? '#555';
   }
   .nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
 
-  .sidebar-user {
+  .sidebar-footer {
+    flex: 0 0 auto;
     padding: 16px 20px;
     border-top: 1px solid rgba(255,255,255,0.08);
   }
+  .sidebar-user { padding: 0; }
   .user-info { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
   .user-avatar {
     width: 34px; height: 34px;
@@ -165,7 +181,11 @@ $roleColor  = $roleColors[$role] ?? '#555';
     letter-spacing: 0.5px;
   }
   .btn-logout {
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 40px;
     text-align: center;
     padding: 8px;
     background: rgba(255,255,255,0.07);
@@ -176,6 +196,7 @@ $roleColor  = $roleColors[$role] ?? '#555';
     transition: all 0.2s;
   }
   .btn-logout:hover { background: rgba(214,69,69,0.2); color: #ff8080; }
+  .btn-logout:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; color: white; }
 
   /* CONTENT COLUMN */
   .content-wrap {
@@ -401,6 +422,16 @@ $roleColor  = $roleColors[$role] ?? '#555';
     .main { padding: 20px; }
     .content-wrap { margin-left: 0; }
   }
+
+  @media (max-height: 700px) {
+    .sidebar-brand { padding: 14px 20px; }
+    .sidebar-brand .book-icon { margin-bottom: 4px; }
+    .nav-section { padding: 8px 0; }
+    .nav-label { padding-top: 6px; padding-bottom: 4px; }
+    .nav-item { padding-top: 8px; padding-bottom: 8px; }
+    .sidebar-footer { padding-top: 10px; padding-bottom: 10px; }
+    .user-info { margin-bottom: 8px; }
+  }
 </style>
 </head>
 <body>
@@ -422,12 +453,14 @@ $roleColor  = $roleColors[$role] ?? '#555';
       </a>
     <?php endforeach; ?>
   </nav>
-  <div class="sidebar-user">
-    <div class="user-info">
-      <div class="user-avatar"><?= htmlspecialchars(initial($name)) ?></div>
-      <div class="user-details">
-        <div class="name"><?= htmlspecialchars(explode(' ', $name)[0]) ?></div>
-        <span class="role-tag"><?= ucfirst($role) ?></span>
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="user-info">
+        <div class="user-avatar"><?= htmlspecialchars(initial($name)) ?></div>
+        <div class="user-details">
+          <div class="name"><?= htmlspecialchars(explode(' ', $name)[0]) ?></div>
+          <span class="role-tag"><?= ucfirst($role) ?></span>
+        </div>
       </div>
     </div>
     <a href="<?= SITE_URL ?>/logout.php" class="btn-logout">← Sign Out</a>
