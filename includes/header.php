@@ -354,12 +354,20 @@ $roleColor  = $roleColors[$role] ?? '#555';
   .report-kpi-grid, .dashboard-kpi-grid { display: grid; grid-auto-rows: 1fr; gap: 20px; margin-bottom: 24px; align-items: stretch; }
   .report-kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .dashboard-kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .librarian-dashboard-kpi-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
   .kpi-card { min-width: 0; height: 100%; padding: 20px; display: grid; grid-template-columns: 44px minmax(0, 1fr); grid-template-rows: auto auto; align-content: center; align-items: center; column-gap: 14px; }
   .kpi-card .stat-icon { width: 44px; height: 44px; margin: 0; grid-row: 1 / 3; display: flex; align-items: center; justify-content: center; border-radius: 10px; color: var(--accent, var(--gold)); background: #f4f6fb; }
   .kpi-card .stat-icon svg { display: block; width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
   .kpi-card .stat-value { min-width: 0; font-size: clamp(16px, 2vw, 28px); line-height: 1.2; font-weight: 600; color: var(--navy); font-variant-numeric: tabular-nums; white-space: nowrap; }
   .kpi-card .stat-label { min-height: 2.6em; margin-top: 2px; font-size: 12px; line-height: 1.3; color: #888; }
   .dashboard-panels { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+  .librarian-dashboard-panels { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+  .librarian-dashboard-panels > .card { min-width: 0; }
+  .librarian-recent-table { min-width: 560px; table-layout: fixed; }
+  .librarian-recent-table th:nth-child(1), .librarian-recent-table td:nth-child(1) { width: 28%; text-align: left; }
+  .librarian-recent-table th:nth-child(2), .librarian-recent-table td:nth-child(2) { width: 42%; text-align: left; }
+  .librarian-recent-table th:nth-child(3), .librarian-recent-table td:nth-child(3) { width: 17%; text-align: left; white-space: nowrap; }
+  .librarian-recent-table th:nth-child(4), .librarian-recent-table td:nth-child(4) { width: 13%; text-align: center; }
   .dashboard-actions { display: flex; flex-direction: column; gap: 10px; }
   .dashboard-actions .btn { width: 100%; min-height: 40px; justify-content: flex-start; }
   .report-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin-bottom: 24px; }
@@ -383,6 +391,7 @@ $roleColor  = $roleColors[$role] ?? '#555';
 
   @media (max-width: 900px) {
     .dashboard-panels { grid-template-columns: minmax(0, 1fr); }
+    .librarian-dashboard-panels { grid-template-columns: minmax(0, 1fr); }
   }
 
   @media (max-width: 768px) {
